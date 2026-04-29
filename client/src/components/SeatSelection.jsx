@@ -5,10 +5,29 @@ const SeatSelection = ({ selectedSeats = [], setSelectedSeats, bus }) => {
   const rows = 10;
   const seatsPerSide = 2;
 
+  useEffect(() => {
+    const styleId = "seat-hover-style";
+    if (!document.getElementById(styleId)) {
+      const hoverStyle = document.createElement("style");
+      hoverStyle.id = styleId;
+      hoverStyle.innerHTML = `
+        .seat-hover:hover {
+          transform: scale(1.05);
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.20);
+        }
+      `;
+      document.head.appendChild(hoverStyle);
+    }
+  }, []);
+
   console.log("Bus reçu dans SeatSelection :", bus);
 
   if (!bus) {
-    return <div style={{ textAlign: "center", padding: "20px", color: "gray" }}>Chargement des données du bus...</div>;
+    return (
+      <div style={{ textAlign: "center", padding: "20px", color: "gray" }}>
+        Chargement des données du bus...
+      </div>
+    );
   }
 
   const bookedSeats = (bus.seatsBooked || []).map((seat) => seat.toString());
@@ -18,9 +37,7 @@ const SeatSelection = ({ selectedSeats = [], setSelectedSeats, bus }) => {
     if (bookedSeats.includes(seatStr)) return;
 
     setSelectedSeats((prev) =>
-      prev.includes(seatStr)
-        ? prev.filter((s) => s !== seatStr)
-        : [...prev, seatStr]
+      prev.includes(seatStr) ? prev.filter((s) => s !== seatStr) : [...prev, seatStr]
     );
   };
 
@@ -43,18 +60,12 @@ const SeatSelection = ({ selectedSeats = [], setSelectedSeats, bus }) => {
           title={`Siège ${seatId}`}
           style={{
             ...styles.seat,
-            ...(isBooked
-              ? styles.booked
-              : isSelected
-              ? styles.selected
-              : styles.available),
+            ...(isBooked ? styles.booked : isSelected ? styles.selected : styles.available),
           }}
           onClick={isBooked ? undefined : () => selectOrUnselectSeats(seatId)}
         >
           <UserOutlined style={{ color: iconColor }} />
-          <span style={{ fontSize: "11px", marginTop: "1px", color: textColor }}>
-            {seatId}
-          </span>
+          <span style={{ fontSize: "11px", marginTop: "1px", color: textColor }}>{seatId}</span>
         </div>
       );
     };
@@ -76,33 +87,12 @@ const SeatSelection = ({ selectedSeats = [], setSelectedSeats, bus }) => {
     );
   };
 
-  useEffect(() => {
-    const styleId = "seat-hover-style";
-    if (!document.getElementById(styleId)) {
-      const hoverStyle = document.createElement("style");
-      hoverStyle.id = styleId;
-      hoverStyle.innerHTML = `
-        .seat-hover:hover {
-          transform: scale(1.05);
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.20);
-        }
-      `;
-      document.head.appendChild(hoverStyle);
-    }
-  }, []);
-
   return (
     <div style={styles.container}>
-      <div style={styles.layout}>
-        {[...Array(rows)].map((_, index) => renderRow(index))}
-      </div>
+      <div style={styles.layout}>{[...Array(rows)].map((_, index) => renderRow(index))}</div>
     </div>
   );
 };
-
-
-
-
 
 const styles = {
   container: {
@@ -110,7 +100,6 @@ const styles = {
     fontFamily: "Arial, sans-serif",
     padding: "10px",
     color: "white",
-    
   },
   layout: {
     overflow: "hidden",
@@ -122,7 +111,6 @@ const styles = {
     width: "fit-content",
     margin: "0 auto",
     backgroundColor: "white",
-  
   },
   row: {
     display: "flex",

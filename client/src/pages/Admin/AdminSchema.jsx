@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from "react";
-import { Table, Button, Spin, message, Tooltip, Tag } from "antd";
+import { Table, Button, Spin, message, Tooltip } from "antd";
+import { Eye } from "lucide-react";
 import {
   BankOutlined,
   CarOutlined,
   EnvironmentOutlined,
   UsergroupAddOutlined,
   MoneyCollectOutlined,
-  EyeOutlined,
 } from "@ant-design/icons";
 import axios from "axios";
 
@@ -39,97 +39,89 @@ function CompanyStats() {
     fetchStats();
   }, []);
 
-  const cellStyle = {
-    fontSize: "16px",
-    fontWeight: 600,
-    color: "#1f2937", // gris très foncé pour bon contraste
-    padding: "12px 16px",
-  };
+  const formatPrice = (value) =>
+    new Intl.NumberFormat("fr-FR", { minimumFractionDigits: 0 }).format(value) + " FCFA";
 
   const columns = [
     {
       title: (
-        <span className="flex items-center gap-1">
-          <BankOutlined style={{ color: "#2f54eb" }} />
-          <strong>Nom de la compagnie</strong>
-        </span>
+        <div className="flex items-center gap-1 font-semibold text-gray-700">
+          <BankOutlined className="text-blue-600" />
+          Nom de la compagnie
+        </div>
       ),
       dataIndex: "companyName",
-      key: "companyName",
-      render: (text) => (
-        <span style={{ ...cellStyle, fontWeight: 700 }}>{text}</span>
-      ),
-      width: 260,
+      render: (text) => <span className="font-bold text-gray-800">{text}</span>,
     },
     {
       title: (
-        <span className="flex items-center gap-1">
-          <CarOutlined style={{ color: "#13c2c2" }} />
-          <strong>Trajets</strong>
-        </span>
+        <div className="flex items-center gap-1 font-semibold text-gray-700 justify-center">
+          <CarOutlined className="text-cyan-600" />
+          Trajets
+        </div>
       ),
       dataIndex: "tripsCount",
-      key: "tripsCount",
       align: "center",
-      render: (value) => <Tag color="cyan" style={{ fontWeight: 700, fontSize: 16 }}>{value}</Tag>,
-      width: 110,
+      render: (value) => (
+        <span className="px-2 py-1 text-sm bg-cyan-100 text-cyan-800 rounded font-semibold">
+          {value}
+        </span>
+      ),
     },
     {
       title: (
-        <span className="flex items-center gap-1">
-          <EnvironmentOutlined style={{ color: "#2f54eb" }} />
-          <strong>Stations</strong>
-        </span>
+        <div className="flex items-center gap-1 font-semibold text-gray-700 justify-center">
+          <EnvironmentOutlined className="text-blue-600" />
+          Stations
+        </div>
       ),
       dataIndex: "stationsCount",
-      key: "stationsCount",
       align: "center",
-      render: (value) => <Tag color="geekblue" style={{ fontWeight: 700, fontSize: 16 }}>{value}</Tag>,
-      width: 110,
+      render: (value) => (
+        <span className="px-2 py-1 text-sm bg-blue-100 text-blue-800 rounded font-semibold">
+          {value}
+        </span>
+      ),
     },
     {
       title: (
-        <span className="flex items-center gap-1">
-          <UsergroupAddOutlined style={{ color: "#52c41a" }} />
-          <strong>Réservations</strong>
-        </span>
+        <div className="flex items-center gap-1 font-semibold text-gray-700 justify-center">
+          <UsergroupAddOutlined className="text-green-600" />
+          Réservations
+        </div>
       ),
       dataIndex: "reservationsCount",
-      key: "reservationsCount",
       align: "center",
-      render: (value) => <Tag color="green" style={{ fontWeight: 700, fontSize: 16 }}>{value}</Tag>,
-      width: 130,
+      render: (value) => (
+        <span className="px-2 py-1 text-sm bg-green-100 text-green-800 rounded font-semibold">
+          {value}
+        </span>
+      ),
     },
     {
       title: (
-        <span className="flex items-center gap-1">
-          <MoneyCollectOutlined style={{ color: "#faad14" }} />
-          <strong>Revenus (FCFA)</strong>
-        </span>
+        <div className="flex items-center gap-1 font-semibold text-gray-700 justify-end">
+          <MoneyCollectOutlined className="text-yellow-600" />
+          Revenus
+        </div>
       ),
       dataIndex: "totalRevenue",
-      key: "totalRevenue",
       align: "right",
       render: (value) => (
-        <span style={cellStyle}>
-          {value.toLocaleString("fr-FR", { minimumFractionDigits: 0 })}
-        </span>
+        <span className="text-sm font-semibold text-gray-800">{formatPrice(value)}</span>
       ),
-      width: 180,
     },
     {
       title: "Actions",
       key: "actions",
       align: "center",
-      width: 140,
       render: (_, record) => (
         <Tooltip title={`Voir détails de ${record.companyName}`}>
           <Button
             type="primary"
-            icon={<EyeOutlined />}
+            icon={<Eye className="w-4 h-4" />}
             onClick={() => alert(`Détail pour ${record.companyName}`)}
-            size="middle"
-            style={{ fontWeight: 600 }}
+            className="bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs"
           >
             Voir détails
           </Button>
@@ -139,12 +131,7 @@ function CompanyStats() {
   ];
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen max-w-5xl mx-auto rounded-md shadow-md">
-      <h1 className="text-3xl font-bold mb-6 text-blue-800 flex items-center gap-3">
-        <BankOutlined style={{ fontSize: 30 }} />
-        Statistiques des compagnies
-      </h1>
-
+    <div className="p-6 min-h-screen max-w-6xl mx-auto">
       {loading ? (
         <div className="flex justify-center items-center h-48">
           <Spin size="large" />
@@ -154,17 +141,8 @@ function CompanyStats() {
           columns={columns}
           dataSource={data}
           rowKey="companyId"
-          pagination={{ pageSize: 5, showSizeChanger: false }}
-          bordered
-          size="middle"
-          scroll={{ x: 780 }}
-          style={{
-            backgroundColor: "white",
-            borderRadius: 8,
-            fontWeight: 600,
-            fontSize: 16,
-            color: "#1f2937",
-          }}
+          pagination={{ pageSize: 5 }}
+          className="rounded-lg border border-gray-200"
         />
       )}
     </div>

@@ -1,7 +1,7 @@
-import React from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Form, message } from 'antd';
-import axios from 'axios';
+import React from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Form, message } from "antd";
+import axios from "axios";
 
 function ResetPassword() {
   const { token } = useParams();
@@ -13,13 +13,13 @@ function ResetPassword() {
       if (response.data.success) {
         message.success(response.data.message);
         setTimeout(() => {
-          navigate('/login'); // redirection vers la page de connexion
+          navigate("/login"); // redirection vers la page de connexion
         }, 1500); // petite pause pour laisser apparaître le message
       } else {
         message.error(response.data.message);
       }
     } catch (error) {
-      message.error('Erreur lors de la réinitialisation');
+      message.error("Erreur lors de la réinitialisation");
     }
   };
 
@@ -31,7 +31,7 @@ function ResetPassword() {
           <Form.Item
             name="password"
             label="Nouveau mot de passe"
-            rules={[{ required: true, message: 'Veuillez entrer un mot de passe' }]}
+            rules={[{ required: true, message: "Veuillez entrer un mot de passe" }]}
           >
             <input type="password" className="w-full border py-2 px-3 rounded" />
           </Form.Item>

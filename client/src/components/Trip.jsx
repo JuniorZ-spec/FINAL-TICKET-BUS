@@ -1,104 +1,84 @@
-import { useNavigate } from 'react-router-dom';
-import {
-  MapPin,
-  Calendar,
-  ArrowRight,
-  Clock,
-  Wifi,
-  Wind
-} from 'lucide-react';
+import { useNavigate } from "react-router-dom";
+import { MapPin, Calendar, Clock, Wifi, Wind } from "lucide-react";
 
 function Trip({ trip }) {
   const navigate = useNavigate();
+
   const handleBooking = () => {
-    navigate(`/book-now/${trip._id}`);
+    navigate(`/book-now/${trip.id}`);
   };
 
   const displayDate = trip.date
-    ? new Date(trip.date).toLocaleDateString('fr-FR')
-    : 'Date non spécifiée';
+    ? new Date(trip.date).toLocaleDateString("fr-FR")
+    : "Date non spécifiée";
 
   return (
-    <div className="bg-white rounded-xl overflow-hidden shadow-lg border border-gray-200 flex flex-col transition-all hover:shadow-xl duration-300">
-      {/* En-tête */}
-      <div className="bg-blue-600 text-white px-4 py-3 flex justify-between items-center">
-        <h2 className="text-lg font-bold">{trip.company.companyName}</h2>
-        <div className="flex items-center gap-5 text-sm">
-          {trip.bus?.services?.airConditioning && (
-            <div className="flex items-center gap-1">
-              <Wind  size={16} />
-              <span>Clim</span>
-            </div>
-          )}
-          {trip.bus?.services?.wifi && (
-            <div className="flex items-center gap-1">
-              <Wifi size={16} />
-              <span>Wi-Fi</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Section trajet */}
-      <div className="px-4 py-3 flex justify-between items-center border-b border-gray-100">
-        <div>
-          <div className="flex items-center gap-1 text-sm text-blue-600 font-semibold">
-            <MapPin size={20} />
-            <span>Départ</span>
+    <div className="w-full max-w-md mx-auto bg-white border border-gray-200 rounded-lg shadow-md hover:shadow-lg hover:border-blue-400 transition-all duration-300 transform hover:-translate-y-1 overflow-hidden">
+      {/* Header compagnie + prix */}
+      <div className="px-4 pt-3 pb-2 flex justify-between items-start">
+        <div className="flex items-center justify-content gap-2">
+          <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 text-white rounded-md flex items-center justify-center font-bold text-lg shadow">
+            {trip.company?.companyName?.charAt(0) || "?"}
           </div>
-          <div className="text-base font-bold text-gray-900">{trip.from || "N/A"}</div>
-          {trip.departureStations?.length > 0 && (
-            <div className="text-xs text-blue-600">{trip.departureStations[0].name}</div>
-          )}
-        </div>
-
-        <div className="mx-2">
-          <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white">
-            <ArrowRight size={20} />
+          <div>
+            <h3 className="text-sm font-semibold text-gray-800">{trip.company?.companyName}</h3>
+            <span className="text-xs text-gray-500">{trip.bus?.type || "Bus Standard"}</span>
           </div>
         </div>
-
         <div className="text-right">
-          <div className="flex justify-end items-center gap-1 text-sm text-blue-600 font-semibold">
-            <MapPin size={20} />
-            <span>Arrivée</span>
+          <div className="text-lg font-bold text-blue-600">{trip.price} F</div>
+          <div className="text-xs text-gray-500">{trip.availableSeats || "--"} places</div>
+        </div>
+      </div>
+
+      {/* Lieux */}
+      <div className="px-4 pt-2 pb-3 border-t border-b border-gray-100 flex items-center justify-between">
+        <div className="flex flex-col text-left">
+          <div className="text-base font-bold text-gray-900">{trip.from}</div>
+          <div className="flex items-center gap-1 text-xs text-gray-500">
+            <MapPin size={11} /> {trip.departureStation?.name || "Station"}
           </div>
-          <div className="text-base font-bold text-gray-900">{trip.to || "N/A"}</div>
-          {trip.arrivalStations?.length > 0 && (
-            <div className="text-xs text-blue-600">{trip.arrivalStations[0].name}</div>
+        </div>
+
+        <div className="text-center">
+          <Clock size={16} className="text-blue-500 mb-1 mx-auto" />
+          <div className="text-xs text-gray-500">{trip.departureTime || "--"}</div>
+        </div>
+
+        <div className="flex flex-col text-right">
+          <div className="text-base font-bold text-gray-900">{trip.to}</div>
+          <div className="flex items-center gap-1 text-xs text-gray-500 justify-end">
+            {trip.arrivalStation?.name || "Station"} <MapPin size={11} />
+          </div>
+        </div>
+      </div>
+
+      {/* Infos pratiques */}
+      <div className="px-4 pt-3 pb-2 flex justify-between items-center text-xs text-gray-600">
+        <div className="flex items-center gap-2">
+          <Calendar size={13} className="text-blue-500" />
+          {displayDate}
+        </div>
+        <div className="flex gap-2 items-center">
+          {trip.bus?.airConditioning && (
+            <div className="bg-gray-100 px-2 py-1 rounded-full flex items-center gap-1">
+              <Wind size={11} className="text-blue-500" /> Clim
+            </div>
+          )}
+          {trip.bus?.wifi && (
+            <div className="bg-gray-100 px-2 py-1 rounded-full flex items-center gap-1">
+              <Wifi size={11} className="text-blue-500" /> Wi-Fi
+            </div>
           )}
         </div>
       </div>
 
-      {/* Informations supplémentaires */}
-      <div className="px-4 py-3 grid grid-cols-3 gap-4 text-sm text-gray-700 border-b border-gray-100">
-        <div>
-          <div className="flex items-center gap-1 font-semibold">
-            <Calendar size={20} className="text-blue-600" />
-            <span>Date</span>
-          </div>
-          <div className="font-bold text-gray-900">{displayDate}</div>
-        </div>
-
-        <div>
-          <div className="flex items-center gap-1 font-semibold">
-            <Clock size={14} className="text-blue-600" />
-            <span>Heure</span>
-          </div>
-          <div className="font-bold text-gray-900">{trip.departureTime}</div>
-        </div>
-
-        <div>
-          <div className="font-semibold">Tarif</div>
-          <div className="font-bold text-gray-900">{trip.price} FCFA</div>
-        </div>
-      </div>
-
-     
-      <div className="px-3 py-3 text-right font-bold">
-        <button style={ {borderRadius: '8px'}}
+      {/* Bouton */}
+      <div className="px-3 pb-3 pt-1 text-right">
+        <button
           onClick={handleBooking}
-          className="bg-blue-600 text-white px-4 py-2 rounded-full font-semibold text-md hover:bg-blue-700 hover:scale-105 transition-all"
+          className="text-xs font-semibold bg-blue-600 text-white px-3 py-2 rounded-md hover:bg-blue-700 transition-all"
+          style={{ borderRadius: "8px", fontFamily: "Poppins, sans-serif" }}
         >
           Réserver
         </button>

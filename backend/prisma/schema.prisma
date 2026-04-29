@@ -1,0 +1,154 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum BookingStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+}
+
+// ─────────────────────────────────────────
+// Models
+// ─────────────────────────────────────────
+
+model User {
+  id                  String    @id @default(cuid())
+  name                String?
+  email               String    @unique
+  password            String
+  role                UserRole  @default(USER)
+  phone               String?
+  address             String?
+  isBlocked           Boolean   @default(false)
+  resetPasswordToken  String?
+  resetPasswordExpire DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  bookings Booking[]
+  reviews  Review[]
+}
+
+model Company {
+  id                  String    @id @default(cuid())
+  companyName         String    @unique
+  email               String    @unique
+  password            String
+  isBlocked           Boolean   @default(false)
+  resetPasswordToken  String?
+  resetPasswordExpire DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+
+  buses    Bus[]
+  stations Station[]
+  trips    Trip[]
+  bookings Booking[]
+  reviews  Review[]
+}
+
+model Bus {
+  id              String   @id @default(cuid())
+  number          String
+  name            String
+  capacity        Int
+  airConditioning Boolean  @default(false)
+  wifi            Boolean  @default(false)
+  company         Company  @relation(fields: [companyId], references: [id])
+  companyId       String
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  trips Trip[]
+
+  @@index([companyId])
+}
+
+model Station {
+  id        String   @id @default(cuid())
+  name      String
+  address   String
+  city      String
+  company   Company  @relation(fields: [companyId], references: [id])
+  companyId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  departureTrips Trip[] @relation("DepartureStation")
+  arrivalTrips   Trip[] @relation("ArrivalStation")
+
+  @@index([companyId])
+}
+
+model Trip {
+  id                 String   @id @default(cuid())
+  from               String
+  to                 String
+  date               DateTime
+  departureTime      String
+  price              Float
+  company            Company  @relation(fields: [companyId], references: [id])
+  companyId          String
+  bus                Bus      @relation(fields: [busId], references: [id])
+  busId              String
+  departureStation   Station  @relation("DepartureStation", fields: [departureStationId], references: [id])
+  departureStationId String
+  arrivalStation     Station  @relation("ArrivalStation", fields: [arrivalStationId], references: [id])
+  arrivalStationId   String
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  bookings Booking[]
+
+  @@index([companyId])
+  @@index([busId])
+  @@index([date])
+}
+
+model Booking {
+  id            String        @id @default(cuid())
+  seats         String[]
+  status        BookingStatus @default(ACTIVE)
+  transactionId String
+  user          User          @relation(fields: [userId], references: [id])
+  userId        String
+  trip          Trip          @relation(fields: [tripId], references: [id])
+  tripId        String
+  company       Company       @relation(fields: [companyId], references: [id])
+  companyId     String
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([userId])
+  @@index([tripId])
+  @@index([companyId])
+}
+
+model Review {
+  id        String   @id @default(cuid())
+  content   String
+  rating    Int?
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  company   Company  @relation(fields: [companyId], references: [id])
+  companyId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+}

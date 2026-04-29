@@ -1,8 +1,8 @@
 import React, { useState } from "react";
+import { message } from "antd";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
-
 
 function Profile() {
   const { user } = useSelector((state) => state.users); // Récupérer l'utilisateur connecté depuis Redux
@@ -16,28 +16,27 @@ function Profile() {
   const handlePasswordChange = async (e) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      toast.error("Les mots de passe ne correspondent pas.");
+      message.error("Les mots de passe ne correspondent pas.");
       return;
     }
 
     try {
       setLoading(true);
       const response = await axios.post("/api/users/change-password", {
-        userId: user._id,
         currentPassword,
         newPassword,
       });
 
       if (response.data.success) {
-        toast.success("Mot de passe modifié avec succès !");
+        message.success("Mot de passe modifié avec succès !");
         setCurrentPassword("");
         setNewPassword("");
         setConfirmPassword("");
       } else {
-        toast.error(response.data.message);
+        message.error(response.data.message);
       }
     } catch (error) {
-      toast.error("Une erreur s'est produite lors de la modification du mot de passe.");
+      message.error("Une erreur s'est produite lors de la modification du mot de passe.");
       console.error(error);
     } finally {
       setLoading(false);
@@ -53,8 +52,12 @@ function Profile() {
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-700 mb-2">Informations Personnelles</h2>
           <div className="space-y-2">
-            <p className="text-gray-600"><strong>Nom :</strong> {user?.name}</p>
-            <p className="text-gray-600"><strong>Email :</strong> {user?.email}</p>
+            <p className="text-gray-600">
+              <strong>Nom :</strong> {user?.name}
+            </p>
+            <p className="text-gray-600">
+              <strong>Email :</strong> {user?.email}
+            </p>
           </div>
         </div>
 

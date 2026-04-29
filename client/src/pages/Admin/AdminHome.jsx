@@ -4,27 +4,36 @@ import { ShowLoading, HideLoading } from "../../redux/alertsSlice";
 import { useDispatch } from "react-redux";
 import { message } from "antd";
 
+import { Building2, BusFront, CalendarCheck2, DollarSign, MapPin, Star } from "lucide-react";
+
 import {
-  Building2,
-  BusFront,
-  CalendarCheck2,
-  DollarSign,
-  MapPin,
-  ArrowUpRight,
-  ArrowDownRight,
-} from "lucide-react";
+  ResponsiveContainer,
+  BarChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+} from "recharts";
+
+const PIE_COLORS = ["#6366F1", "#10B981", "#F59E0B", "#EF4444", "#3B82F6"];
 
 function AdminHome() {
   const dispatch = useDispatch();
+
   const [stats, setStats] = useState({
     companiesCount: 0,
     tripsCount: 0,
     reservationsCount: 0,
     totalRevenue: 0,
     popularTrips: [],
+    revenueByDay: [],
   });
 
-  const [companiesRevenue, setCompaniesRevenue] = useState([]);
+  const [companiesData, setCompaniesData] = useState([]);
 
   const getDashboardStats = async () => {
     try {
@@ -32,7 +41,7 @@ function AdminHome() {
       const response = await axiosInstance.get("/api/admin/get-dashboard-stats");
       dispatch(HideLoading());
       if (response.data.success) {
-        setStats(response.data.data);
+        setStats((prev) => ({ ...prev, ...response.data.data }));
       } else {
         message.error(response.data.message);
       }
@@ -42,213 +51,226 @@ function AdminHome() {
     }
   };
 
-  const getCompaniesRevenue = async () => {
+  const getRevenueByDay = async () => {
     try {
       dispatch(ShowLoading());
-      const response = await axiosInstance.get("/api/admin/get-companies-revenue");
+      const response = await axiosInstance.get("/api/admin/get-bookings-per-day");
       dispatch(HideLoading());
       if (response.data.success) {
-        setCompaniesRevenue(response.data.data);
+        const formattedData = Object.entries(response.data.data).map(([date, count]) => ({
+          date,
+          count,
+        }));
+        setStats((prev) => ({
+          ...prev,
+          revenueByDay: formattedData,
+        }));
       } else {
         message.error(response.data.message);
       }
     } catch (error) {
       dispatch(HideLoading());
-      message.error("Erreur lors de la récupération des revenus des compagnies");
+      message.error("Erreur lors de la récupération des réservations journalières");
+    }
+  };
+
+  const getCompaniesData = async () => {
+    try {
+      dispatch(ShowLoading());
+      const response = await axiosInstance.get("/api/admin/get-companies-reservations");
+      dispatch(HideLoading());
+      if (response.data.success) {
+        setCompaniesData(response.data.data);
+      } else {
+        message.error(response.data.message);
+      }
+    } catch (error) {
+      dispatch(HideLoading());
+      message.error("Erreur lors de la récupération des réservations des compagnies");
     }
   };
 
   useEffect(() => {
     getDashboardStats();
-    getCompaniesRevenue();
+    getCompaniesData();
+    getRevenueByDay();
   }, []);
 
-  const statsCards = [
-    {
-      title: "Compagnies",
-      value: stats.companiesCount,
-      icon: Building2,
-      color: "indigo",
-      change: "+3%",
-      trend: "up",
-    },
-    {
-      title: "Trajets",
-      value: stats.tripsCount,
-      icon: BusFront,
-      color: "emerald",
-      change: "-1%",
-      trend: "down",
-    },
-    {
-      title: "Réservations",
-      value: stats.reservationsCount,
-      icon: CalendarCheck2,
-      color: "yellow",
-      change: "+12%",
-      trend: "up",
-    },
-    {
-      title: "Revenus",
-      value: `${stats.totalRevenue.toLocaleString()} F`,
-      icon: DollarSign,
-      color: "pink",
-      change: "+5%",
-      trend: "up",
-    },
-  ];
+  const getChangeColor = (type) => {
+    switch (type) {
+      case "increase":
+        return "text-green-600";
+      case "decrease":
+        return "text-red-600";
+      default:
+        return "text-gray-600";
+    }
+  };
+
+  const COLORS = PIE_COLORS;
+
+  const pieData = companiesData.map((company) => ({
+    name: company.companyName,
+    value: company.bookingsCount || 0,
+  }));
 
   return (
     <main
-      className="min-h-screen max-w-7xl mx-auto bg-gray-50 p-6 font-sans flex flex-col"
-      style={{ height: "calc(100vh - 2.5rem)" }}
+      className="min-h-screen max-w-7xl mx-auto px-7 font-sans flex flex-col"
+      style={{ backgroundColor: "#f3f4f6", borderRadius: "8px", fontFamily: "Poppins, sans-serif" }}
     >
-      {/* Titre */}
-      <h1 className="text-3xl font-bold text-gray-900 mb-6 select-none flex-shrink-0">
-        Tableau de bord
-      </h1>
-
-      {/* Cartes statistiques */}
-      <section
-        className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6 flex-shrink-0"
-        style={{ minHeight: 110 }}
-      >
-        {statsCards.map(({ title, value, icon: Icon, color, change, trend }, i) => (
+      {/* Cartes récapitulatives */}
+      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 mb-8">
+        {[
+          {
+            title: "Compagnies Actives",
+            value: stats.companiesCount,
+            change: "+3% ce mois",
+            changeType: "increase",
+            icon: Building2,
+            color: "bg-indigo-500",
+          },
+          {
+            title: "Trajets disponibles",
+            value: stats.tripsCount,
+            change: "-1% ce mois",
+            changeType: "decrease",
+            icon: BusFront,
+            color: "bg-emerald-500",
+          },
+          {
+            title: "Réservations Totales",
+            value: stats.reservationsCount,
+            change: "+12% ce mois",
+            changeType: "increase",
+            icon: CalendarCheck2,
+            color: "bg-yellow-400",
+          },
+          {
+            title: "Revenus Totaux",
+            value: `${stats.totalRevenue.toLocaleString()} F`,
+            change: "+5% ce mois",
+            changeType: "increase",
+            icon: DollarSign,
+            color: "bg-pink-500",
+          },
+          {
+            title: "Trajets populaires",
+            value: stats.popularTrips.length,
+            change: "+2 ce mois",
+            changeType: "increase",
+            icon: MapPin,
+            color: "bg-orange-400",
+          },
+          {
+            title: "",
+            value: "",
+            change: "",
+            changeType: "increase",
+            icon: Star,
+            color: "bg-yellow-500",
+          },
+        ].map(({ title, value, icon: Icon, color, change, changeType }, i) => (
           <div
             key={i}
-            className="bg-white rounded-lg border border-gray-300 p-3 flex flex-col justify-between cursor-default hover:shadow-md transition-shadow"
+            className="bg-white rounded-xl shadow-sm border border-gray-200 px-4 py-3 hover:shadow-md transition-shadow duration-200 flex items-center justify-between"
+            style={{ height: 120 }}
           >
-            <div className="flex items-center gap-3">
-              <div
-                className={`p-1.5 rounded-lg bg-${color}-100 text-${color}-600 flex items-center justify-center`}
-                style={{ width: 40, height: 40 }}
-              >
-                <Icon size={35} />
-              </div>
-              <div>
-                <p className="text-md font-semibold text-gray-600 tracking-wide">{title}</p>
-                <p className="mt-0.5 text-2xl font-extrabold text-gray-900">{value}</p>
-              </div>
-            </div>
-            <div className="mt-2 flex items-center text-xs font-semibold select-none">
-              {trend === "up" ? (
-                <ArrowUpRight className="w-3.5 h-3.5 text-green-600" />
-              ) : (
-                <ArrowDownRight className="w-3.5 h-3.5 text-red-600" />
-              )}
+            <div className="flex flex-col justify-center gap-[7px]">
+              <span className="text-sm font-medium text-gray-600 leading-tight">{title}</span>
               <span
-                className={`ml-1 ${
-                  trend === "up" ? "text-green-600" : "text-red-600"
-                }`}
+                className={`text-[22px] font-bold leading-tight ${title === "Réservations Totales" && Number(value) === 0 ? "text-gray-400" : "text-gray-900"}`}
               >
-                {change} vs période précédente
+                {value}
               </span>
+              <span className={`text-xs ${getChangeColor(changeType)} leading-tight`}>
+                {change}
+              </span>
+            </div>
+            <div className={`${color} w-11 h-11 rounded-lg flex items-center justify-center`}>
+              <Icon className="w-5 h-5 text-white" />
             </div>
           </div>
         ))}
       </section>
 
-      {/* Tables section */}
-      <section
-        className="grid grid-cols-1 lg:grid-cols-2 gap-6 overflow-hidden flex-grow"
-        style={{ minHeight: 0 }}
-      >
-        {/* Top trajets populaires */}
-        <div
-          className="bg-white rounded-lg border border-gray-300 p-4 shadow-sm flex flex-col"
-          style={{ minHeight: 0 }}
-        >
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2 select-none flex-shrink-0">
-            <MapPin className="w-5 h-5 text-indigo-600" />
-            Top trajets populaires
+      {/* Graphiques */}
+      <section className="grid grid-cols-2 gap-3 flex-grow">
+        {/* BarChart */}
+        <div className="bg-white rounded-xl border border-gray-300 p-4 shadow-md flex flex-col">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            Réservations des 7 derniers jours
           </h2>
-          <div
-            className="overflow-auto flex-grow scrollbar-thin scrollbar-thumb-indigo-300 scrollbar-track-indigo-100"
-            style={{ maxHeight: "calc(100% - 48px)" }}
-          >
-            <table className="w-full text-left text-gray-700 text-sm border-collapse">
-              <thead className="bg-indigo-50 sticky top-0 z-10">
-                <tr>
-                  <th className="py-2 px-3 uppercase font-semibold text-indigo-700 border-b border-indigo-200">
-                    Départ
-                  </th>
-                  <th className="py-2 px-3 uppercase font-semibold text-indigo-700 border-b border-indigo-200">
-                    Arrivée
-                  </th>
-                  <th className="py-2 px-3 uppercase font-semibold text-indigo-700 border-b border-indigo-200 text-right">
-                    Réservations
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...new Map(
-                  stats.popularTrips.map((item) => [`${item.trip.from}-${item.trip.to}`, item])
-                ).values()].map((tripData, i) => (
-                  <tr
-                    key={i}
-                    className={`border-b cursor-pointer hover:bg-indigo-100 transition-colors
-                    ${i % 2 === 0 ? "bg-white" : "bg-indigo-50"}`}
-                  >
-                    <td className="py-1.5 px-3 flex items-center gap-1 font-medium text-indigo-900">
-                      <MapPin className="w-4 h-4 text-indigo-600" />
-                      {tripData.trip.from}
-                    </td>
-                    <td className="py-1.5 px-3 flex items-center gap-1 font-medium text-indigo-900">
-                      <MapPin className="w-4 h-4 text-indigo-600 rotate-180" />
-                      {tripData.trip.to}
-                    </td>
-                    <td className="py-1.5 px-3 font-semibold text-indigo-700 text-right">
-                      {tripData.count}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="h-72 w-full animate-fade-in">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart
+                data={Array.isArray(stats.revenueByDay) ? stats.revenueByDay : []}
+                margin={{ top: 10, right: 30, left: 20, bottom: 5 }}
+              >
+                <CartesianGrid strokeDasharray="4 4" stroke="#e5e7eb" />
+                <XAxis dataKey="date" stroke="#6b7280" tick={{ fontSize: 12 }} />
+                <YAxis stroke="#6b7280" tick={{ fontSize: 12 }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "#ffffff",
+                    borderColor: "#cbd5e1",
+                    borderRadius: 8,
+                  }}
+                  labelStyle={{ color: "#1e293b", fontWeight: 600 }}
+                  formatter={(value) => [`${value}`, "Réservations"]}
+                  cursor={{ fill: "#f1f5f9" }}
+                />
+                <defs>
+                  <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3B82F6" stopOpacity={0.8} />
+                    <stop offset="100%" stopColor="#60A5FA" stopOpacity={0.6} />
+                  </linearGradient>
+                </defs>
+                <Bar dataKey="count" fill="url(#colorRevenue)" radius={[8, 8, 0, 0]} barSize={55} />
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         </div>
 
-        {/* Revenus des compagnies */}
-        <div
-          className="bg-white rounded-lg border border-gray-300 p-4 shadow-sm flex flex-col"
-          style={{ minHeight: 0 }}
-        >
-          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2 select-none flex-shrink-0">
-            <DollarSign className="w-5 h-5 text-pink-600" />
-            Revenus des compagnies
+        {/* PieChart */}
+        <div className="bg-white rounded-xl border border-gray-300 p-4 shadow-md flex flex-col">
+          <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            Répartition des réservations par compagnie
           </h2>
-          <div
-            className="overflow-auto flex-grow scrollbar-thin scrollbar-thumb-pink-300 scrollbar-track-pink-100"
-            style={{ maxHeight: "calc(100% - 48px)" }}
-          >
-            <table className="w-full text-left text-gray-700 text-sm border-collapse">
-              <thead className="bg-pink-50 sticky top-0 z-10">
-                <tr>
-                  <th className="py-2 px-3 uppercase font-semibold text-pink-700 border-b border-pink-200">
-                    Compagnie
-                  </th>
-                  <th className="py-2 px-3 uppercase font-semibold text-pink-700 border-b border-pink-200 text-right">
-                    Revenu
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {companiesRevenue.map((company, i) => (
-                  <tr
-                    key={i}
-                    className={`border-b cursor-pointer hover:bg-pink-100 transition-colors
-                    ${i % 2 === 0 ? "bg-white" : "bg-pink-50"}`}
-                  >
-                    <td className="py-1.5 px-3 flex items-center gap-1 font-medium text-pink-900">
-                      <DollarSign className="w-4 h-4" />
-                      {company.companyName}
-                    </td>
-                    <td className="py-1.5 px-3 font-semibold text-pink-600 text-right">
-                      {company.revenue.toLocaleString()} FCFA
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="flex justify-center mb-4">
+            <ResponsiveContainer width="100%" height={180}>
+              <PieChart>
+                <Pie
+                  data={pieData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={50}
+                  outerRadius={90}
+                  paddingAngle={1}
+                  dataKey="value"
+                >
+                  {pieData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Pie>
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+          <div className="space-y-2 px-4">
+            {pieData.map((seg, i) => (
+              <div key={i} className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span
+                    className="w-3 h-3 rounded-full"
+                    style={{ backgroundColor: COLORS[i % COLORS.length] }}
+                  ></span>
+                  <span className="text-sm text-gray-700 font-medium">{seg.name}</span>
+                </div>
+                <span className="text-sm font-semibold text-gray-900">
+                  {seg.value.toLocaleString()} réservation{seg.value > 1 ? "s" : ""}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
       </section>

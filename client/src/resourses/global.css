@@ -6,14 +6,12 @@
     width: 400px;
 }
 
-body {
-    background: linear-gradient(135deg, #ffffff 0%, #b5cdf7 100%);
-}
+
 
 
 input {
     padding: 10px;
-    height: 40px;
+    height: 50px;
     border: 1px solid rgb(155, 155, 155);
     
     background-color: #ffffff;
@@ -32,7 +30,7 @@ input:focus {
     box-shadow: 0 0 8px rgba(5, 147, 255, 0.7); 
     background-color: #fffefe;
     border: 1px solid rgb(255, 255, 255);
-    transform: scale(1.05);  
+    transform: scale(1.);  
 }
 
 
@@ -93,7 +91,8 @@ input:focus:hover {
 .primary-btn{
     background-color: var(--primary);
     color : white;
-    border: none;
+    border:none;
+    border-radius:10px;
     padding: 10px 20px ;
     cursor: pointer;
 }

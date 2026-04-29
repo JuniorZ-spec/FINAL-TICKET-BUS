@@ -19,7 +19,6 @@ module.exports = (req, res, next) => {
       userId: decoded.userId,
       role: decoded.role,
     };
-    
 
     next();
   } catch (error) {

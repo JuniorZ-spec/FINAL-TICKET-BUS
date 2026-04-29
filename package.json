@@ -1,0 +1,28 @@
+{
+  "name": "ticket-bus",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "prepare": "husky",
+    "lint:client": "cd client && npx eslint src --ext .js,.jsx",
+    "lint:backend": "cd backend && npx eslint . --ext .js",
+    "format:client": "cd client && npx prettier --write src",
+    "format:backend": "cd backend && npx prettier --write ."
+  },
+  "devDependencies": {
+    "eslint": "^8.57.1",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.3"
+  },
+  "lint-staged": {
+    "backend/**/*.js": [
+      "prettier --write",
+      "eslint --fix"
+    ],
+    "client/src/**/*.{js,jsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ]
+  }
+}

@@ -1,17 +1,12 @@
 import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 import { message, Table, Button } from "antd";
+import { MapPin, Pencil, Trash, PlusCircle, Building2 } from "lucide-react";
+
 import { ShowLoading, HideLoading } from "../../redux/alertsSlice";
 import { axiosInstance } from "../../helpers/axiosInstance";
 import StationForm from "../../components/StationForm";
 import PageTitle from "../../components/PageTitle";
-import {
-  MapPin,
-  Pencil,
-  Trash,
-  PlusCircle,
-  Building2,
-} from "lucide-react";
 
 function CompanyStations() {
   const dispatch = useDispatch();
@@ -63,44 +58,47 @@ function CompanyStations() {
       title: "Nom",
       dataIndex: "name",
       render: (name) => (
-        <div className="flex items-center gap-2">
-          <MapPin className="w-5 h-5 text-blue-500" />
-          <span>{name}</span>
+        <div className="flex items-center gap-2 text-sm font-medium text-gray-800">
+          <MapPin className="w-4 h-4 text-blue-600" />
+          {name}
         </div>
       ),
     },
     {
       title: "Adresse",
       dataIndex: "address",
-      render: (address) => (
-        <span className="text-sm text-gray-700">{address}</span>
-      ),
+      render: (address) => <span className="text-sm text-gray-600">{address || "—"}</span>,
     },
     {
       title: "Ville",
       dataIndex: "city",
       render: (city) => (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 text-sm text-gray-700">
           <Building2 className="w-4 h-4 text-gray-500" />
-          <span className="text-sm">{city}</span>
+          {city}
         </div>
       ),
     },
     {
       title: "Actions",
+      key: "actions",
       render: (_, record) => (
-        <div className="flex gap-2">
+        <div className="flex gap-2 justify-center">
           <Button
+            type="default"
             icon={<Pencil size={16} />}
+            className="border-blue-500 text-blue-600 hover:bg-blue-50"
             onClick={() => {
               setSelectedStation(record);
               setShowStationForm(true);
             }}
           />
           <Button
-            icon={<Trash size={16} />}
+            type="default"
             danger
-            onClick={() => deleteStation(record._id)}
+            icon={<Trash size={16} />}
+            className="hover:bg-red-50"
+            onClick={() => deleteStation(record.id)}
           />
         </div>
       ),
@@ -108,10 +106,9 @@ function CompanyStations() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-100 py-6 px-4">
-      <div className="p-6 bg-white shadow-md w-full max-w-6xl mx-auto rounded-lg overflow-auto">
+    <div className="min-h-screen pt-1 ">
+      <div className="p-2  rounded-lg  w-full max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-4">
-          <PageTitle title="Mes Stations" />
           <Button
             type="primary"
             icon={<PlusCircle size={18} />}
@@ -119,17 +116,18 @@ function CompanyStations() {
               setSelectedStation(null);
               setShowStationForm(true);
             }}
+            className="bg-blue-600 text-white px-2py-2 rounded-md hover:bg-blue-700 shadow-md"
           >
             Ajouter une Station
           </Button>
         </div>
 
         <Table
+          className="rounded-lg border pt-1 border-gray-200"
           columns={columns}
           dataSource={stations}
-          rowKey="_id"
+          rowKey="id"
           pagination={{ pageSize: 6 }}
-          bordered
           locale={{ emptyText: "Aucune station disponible." }}
         />
 

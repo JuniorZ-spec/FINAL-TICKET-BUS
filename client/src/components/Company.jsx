@@ -5,7 +5,7 @@ function Company({ company }) {
   const navigate = useNavigate();
 
   const goToCompanyTrips = () => {
-    navigate(`/company-trips/${company._id}`);
+    navigate(`/company-trips/${company.id}`);
   };
 
   return (
@@ -18,12 +18,8 @@ function Company({ company }) {
           <Building className="w-5 h-5 text-blue-600" />
         </div>
         <div className="flex-1">
-          <h2 className="text-lg font-semibold text-gray-800">
-            {company.companyName}
-          </h2>
-          <p className="text-sm text-gray-600">
-            Voir les trajets proposés →
-          </p>
+          <h2 className="text-lg font-semibold text-gray-800">{company.companyName}</h2>
+          <p className="text-sm text-gray-600">Voir les trajets proposés →</p>
         </div>
       </div>
     </div>

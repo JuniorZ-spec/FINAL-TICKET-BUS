@@ -25,42 +25,210 @@ import BookNow from "./pages/BookNow";
 import Bookings from "./pages/Bookings";
 import Profile from "./pages/Profile";
 import RoleSelector from "./pages/RoleSelector";
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 // Assure-toi d'importer la page AdminTrajets
 
 function App() {
-  const { loading } = useSelector(state => state.alerts);
+  const { loading } = useSelector((state) => state.alerts);
 
   return (
     <div>
       {loading && <Loader />}
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<ProtectedRoute> <Home /> </ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute> <Profile /> </ProtectedRoute>} />
-          <Route path="/bookings" element={<ProtectedRoute> <Bookings /> </ProtectedRoute>} />
-          <Route path="/book-now/:id" element={<ProtectedRoute> <BookNow /> </ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute> <AdminHome /> </ProtectedRoute>} />
-          <Route path="/admin/schema" element={<ProtectedRoute> <AdminSchema /> </ProtectedRoute>} />
-          <Route path="/admin/buses" element={<ProtectedRoute> <AdminBuses /> </ProtectedRoute>} />
-          <Route path="/admin/users" element={<ProtectedRoute> <AdminUsers /> </ProtectedRoute>} />
-          <Route path="/admin/trips" element={<ProtectedRoute> <AdminTrips /> </ProtectedRoute>} />
-          <Route path="/admin/bookings" element={<ProtectedRoute> <AdminBooking /> </ProtectedRoute>} />
-          <Route path="/admin/companys" element={<ProtectedRoute> <AdminCompanys /> </ProtectedRoute>} />
-          <Route path="/company/buses" element={<ProtectedRoute> <CompanyBuses /> </ProtectedRoute>} />
-          <Route path="/company" element={<ProtectedRoute> <CompanyHome /> </ProtectedRoute>} />
-          <Route path="/company/trips" element={<ProtectedRoute> <CompanyTrips /> </ProtectedRoute>} />
-          <Route path="/company/stations" element={<ProtectedRoute> <CompanyStations /> </ProtectedRoute>} />
-          <Route path="/company/bookings" element={<ProtectedRoute> <CompanyBookings /> </ProtectedRoute>} />
-          <Route path="/company/login" element={<PublicRoute> <CompanyLogin /> </PublicRoute>} />
-          <Route path="/roleselector/company/login" element={<PublicRoute> <CompanyLogin /> </PublicRoute>} />{/* Ajout de cette route */}
-          <Route path="/Register" element={<PublicRoute> <Register /> </PublicRoute>} />
-          <Route path="/roleselector" element={<PublicRoute> <RoleSelector /> </PublicRoute>} />
-          <Route path="/Login" element={<PublicRoute> <Login /> </PublicRoute>} />
+          <Route
+            path="/"
+            element={
+              <ProtectedRoute>
+                {" "}
+                <Home />{" "}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/profile"
+            element={
+              <ProtectedRoute>
+                {" "}
+                <Profile />{" "}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/bookings"
+            element={
+              <ProtectedRoute>
+                {" "}
+                <Bookings />{" "}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/book-now/:id"
+            element={
+              <ProtectedRoute>
+                {" "}
+                <BookNow />{" "}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute>
+                {" "}
+                <AdminHome />{" "}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/schema"
+            element={
+              <ProtectedRoute>
+                {" "}
+                <AdminSchema />{" "}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/buses"
+            element={
+              <ProtectedRoute>
+                {" "}
+                <AdminBuses />{" "}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/users"
+            element={
+              <ProtectedRoute>
+                {" "}
+                <AdminUsers />{" "}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/trips"
+            element={
+              <ProtectedRoute>
+                {" "}
+                <AdminTrips />{" "}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/bookings"
+            element={
+              <ProtectedRoute>
+                {" "}
+                <AdminBooking />{" "}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/companys"
+            element={
+              <ProtectedRoute>
+                {" "}
+                <AdminCompanys />{" "}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/company/buses"
+            element={
+              <ProtectedRoute>
+                {" "}
+                <CompanyBuses />{" "}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/company"
+            element={
+              <ProtectedRoute>
+                {" "}
+                <CompanyHome />{" "}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/company/trips"
+            element={
+              <ProtectedRoute>
+                {" "}
+                <CompanyTrips />{" "}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/company/stations"
+            element={
+              <ProtectedRoute>
+                {" "}
+                <CompanyStations />{" "}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/company/bookings"
+            element={
+              <ProtectedRoute>
+                {" "}
+                <CompanyBookings />{" "}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/company/login"
+            element={
+              <PublicRoute>
+                {" "}
+                <CompanyLogin />{" "}
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/roleselector/company/login"
+            element={
+              <PublicRoute>
+                {" "}
+                <CompanyLogin />{" "}
+              </PublicRoute>
+            }
+          />
+          {/* Ajout de cette route */}
+          <Route
+            path="/Register"
+            element={
+              <PublicRoute>
+                {" "}
+                <Register />{" "}
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/roleselector"
+            element={
+              <PublicRoute>
+                {" "}
+                <RoleSelector />{" "}
+              </PublicRoute>
+            }
+          />
+          <Route
+            path="/Login"
+            element={
+              <PublicRoute>
+                {" "}
+                <Login />{" "}
+              </PublicRoute>
+            }
+          />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
-       
         </Routes>
       </BrowserRouter>
     </div>
