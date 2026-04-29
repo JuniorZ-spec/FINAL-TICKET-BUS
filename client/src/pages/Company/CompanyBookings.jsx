@@ -1,20 +1,12 @@
 import { useEffect, useState, useRef } from "react";
 import { useDispatch } from "react-redux";
-import { message, Table, Modal } from "antd";
+import { Table, message, Modal } from "antd";
 import { useReactToPrint } from "react-to-print";
-import { axiosInstance } from "../../helpers/axiosInstance";
+import { Bus, Calendar, Clock, MapPin, Users, CreditCard, Printer, XCircle } from "lucide-react";
+
 import { ShowLoading, HideLoading } from "../../redux/alertsSlice";
+import { axiosInstance } from "../../helpers/axiosInstance";
 import PageTitle from "../../components/PageTitle";
-import {
-  Bus,
-  Calendar,
-  Clock,
-  MapPin,
-  Users,
-  CreditCard,
-  Printer,
-  XCircle,
-} from "lucide-react";
 
 function Bookings() {
   const dispatch = useDispatch();
@@ -32,21 +24,21 @@ function Bookings() {
       if (response.data.success) {
         const mappedData = response.data.data.map((booking) => ({
           ...booking,
-          busName: booking.bus?.name || "N/A",
+          busName: booking.trip?.bus?.name || "N/A",
           passengerName: booking.user?.name || "N/A",
-          busNumber: booking.bus?.number || "N/A",
+          busNumber: booking.trip?.bus?.number || "N/A",
           from: booking.trip?.from || "N/A",
           to: booking.trip?.to || "N/A",
           fare: booking.trip?.price || 0,
           departureDate: booking.trip?.date?.substring(0, 10) || "N/A",
           departureTime: booking.trip?.departureTime || "N/A",
-          departureStation: booking.departureStation?.name || booking.departureStation || "N/A",
-          arrivalStation: booking.arrivalStation?.name || booking.arrivalStation || "N/A",
+          departureStation: booking.trip?.departureStation?.name || "N/A",
+          arrivalStation: booking.trip?.arrivalStation?.name || "N/A",
           seats: Array.isArray(booking.seats)
             ? booking.seats.map((s) => (typeof s === "string" ? s : s?.number || "N/A"))
             : [],
           companyName: booking.company?.companyName || "N/A",
-          key: booking._id,
+          key: booking.id,
         }));
 
         setBookings(mappedData);
@@ -64,6 +56,7 @@ function Bookings() {
       dispatch(ShowLoading());
       const response = await axiosInstance.post("/api/bookings/cancel-booking", { bookingId });
       dispatch(HideLoading());
+
       if (response.data.success) {
         message.success("Réservation annulée");
         getBookings();
@@ -76,25 +69,28 @@ function Bookings() {
     }
   };
 
+  const reactToPrintFn = useReactToPrint({
+    content: () => contentRef.current,
+  });
+
+  useEffect(() => {
+    getBookings();
+  }, []);
+
   const columns = [
-
-
-
-      {
+    {
       title: "Passager",
       render: (_, record) => (
-        <div className="text-sm space-y-1">
-                  <div className="flex items-center gap-1">
-                    <Users className="w-6 h-6 text-gray-400" />
-                    <span className="text-sm text-gray-900">{record.passengerName}</span>
-                  </div>
-                </div>
+        <div className="flex items-center gap-2 text-gray-800 text-sm">
+          <Users className="w-4 h-4 text-gray-500" />
+          <span>{record.passengerName}</span>
+        </div>
       ),
     },
     {
       title: "Trajet",
       render: (_, record) => (
-        <div className="text-sm space-y-1">
+        <div className="space-y-1 text-sm">
           <div className="flex items-center gap-1">
             <MapPin className="w-4 h-4 text-green-600" />
             <span>{record.from}</span>
@@ -109,14 +105,10 @@ function Bookings() {
     {
       title: "Bus",
       render: (_, record) => (
-        <div className="text-sm space-y-1">
-          <div className="flex items-center gap-1">
+        <div className="space-y-1 text-sm">
+          <div className="flex items-center gap-1 text-gray-700">
             <Bus className="w-4 h-4 text-gray-500" />
             <span>{record.busName}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="text-xs text-gray-500">N°</span>
-            <span>{record.busNumber}</span>
           </div>
         </div>
       ),
@@ -124,7 +116,7 @@ function Bookings() {
     {
       title: "Date & Heure",
       render: (_, record) => (
-        <div className="text-sm space-y-1">
+        <div className="space-y-1 text-sm text-gray-700">
           <div className="flex items-center gap-1">
             <Calendar className="w-4 h-4 text-gray-500" />
             <span>{record.departureDate}</span>
@@ -139,13 +131,9 @@ function Bookings() {
     {
       title: "Stations",
       render: (_, record) => (
-        <div className="text-sm space-y-1">
-          <div className="text-gray-700">
-            <strong>Départ:</strong> {record.departureStation}
-          </div>
-          <div className="text-gray-700">
-            <strong>Arrivée:</strong> {record.arrivalStation}
-          </div>
+        <div className="space-y-1 text-xs text-gray-700">
+          <div>{record.departureStation}</div>
+          <div> {record.arrivalStation}</div>
         </div>
       ),
     },
@@ -153,7 +141,7 @@ function Bookings() {
       title: "Places",
       dataIndex: "seats",
       render: (seats) => (
-        <span className="text-xs font-mono bg-blue-100 px-2 py-1 rounded">
+        <span className="text-xs font-mono bg-blue-100 text-blue-800 px-2 py-1 rounded">
           {seats.length > 0 ? seats.join(", ") : "N/A"}
         </span>
       ),
@@ -161,85 +149,44 @@ function Bookings() {
     {
       title: "Montant",
       render: (_, record) => (
-        <div className="flex items-center gap-1 text-sm font-semibold text-gray-800">
-          <CreditCard className="w-4 h-4 text-gray-500" />
-          {record.fare * record.seats.length} FCFA
+        <div className="flex items-center justify-end gap-2 text-sm font-semibold text-gray-800">
+          <CreditCard className="w-4 h-4 text-green-600" />
+          <span>{new Intl.NumberFormat("fr-FR").format(record.fare * record.seats.length)} F</span>
         </div>
       ),
     },
-
-        {
+    {
       title: "Actions",
+      key: "actions",
       render: (_, record) => (
-        <div className="flex flex-col gap-1">
-       
-          <span
-            className="flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 text-xs"
-            onClick={() => cancelBooking(record.key)}
-          >
-            Annuler
-          </span>
-        </div>
+        <button
+          onClick={() => cancelBooking(record.key)}
+          className="px-3 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 text-xs"
+          style={{ borderRadius: "8px" }}
+        >
+          Annuler
+        </button>
       ),
     },
-    
   ];
 
-  const reactToPrintFn = useReactToPrint({
-    content: () => contentRef.current,
-  });
-
-  useEffect(() => {
-    getBookings();
-  }, []);
-
   return (
-    <div className="p-6 bg-gray-100 shadow-lg rounded-lg">
-      <PageTitle title="Réservations" />
-
+    <div className="p-2 bg-gray-100 min-h-screen">
       <Table
         dataSource={bookings}
         columns={columns}
-        pagination={{
-          pageSize: 7,
-          showSizeChanger: true,
-          pageSizeOptions: ['5', '7', '10', '20'],
-        }}
         rowKey="key"
         bordered
+        pagination={{
+          pageSize: 6,
+          showSizeChanger: true,
+          pageSizeOptions: ["5", "6", "10", "20"],
+          showTotal: (total) => `Total : ${total} réservations`,
+        }}
         locale={{ emptyText: "Aucune réservation disponible." }}
+        className="rounded-lg border border-gray-200 mt-4 shadow-sm"
+        scroll={{ x: true }}
       />
-
-      <Modal
-        title="🖨️ Imprimer le Ticket"
-        open={showPrintModal}
-        onCancel={() => {
-          setShowPrintModal(false);
-          setSelectedBooking(null);
-        }}
-        onOk={() => {
-          reactToPrintFn();
-          setShowPrintModal(false);
-        }}
-      >
-        <div ref={contentRef} className="p-4 border border-gray-300 rounded-lg bg-gray-50">
-          {selectedBooking ? (
-            <div className="space-y-2 text-sm">
-              <h2 className="text-lg font-bold text-blue-600">🎫 Ticket de Réservation</h2>
-              <p><strong>Compagnie :</strong> {selectedBooking.companyName}</p>
-              <p><strong>Bus :</strong> {selectedBooking.busName} (N° {selectedBooking.busNumber})</p>
-              <p><strong>Trajet :</strong> {selectedBooking.from} → {selectedBooking.to}</p>
-              <p><strong>Stations :</strong> {selectedBooking.departureStation} → {selectedBooking.arrivalStation}</p>
-              <p><strong>Date :</strong> {selectedBooking.departureDate}</p>
-              <p><strong>Heure :</strong> {selectedBooking.departureTime}</p>
-              <p><strong>Places :</strong> {selectedBooking.seats.join(", ")}</p>
-              <p><strong>Total :</strong> {selectedBooking.fare * selectedBooking.seats.length} FCFA</p>
-            </div>
-          ) : (
-            <p>Aucune réservation sélectionnée</p>
-          )}
-        </div>
-      </Modal>
     </div>
   );
 }

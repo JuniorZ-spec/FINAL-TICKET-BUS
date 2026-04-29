@@ -1,130 +1,128 @@
 .layout-parent {
-    display: flex;
-    width: 100%;
-    height: 100vh;
-    background-color: #f3f4f6;
-  }
-  
-  .body {
-    width: 100%;
-    padding: 15px;
-  }
-  
-  
+  display: flex;
+  width: 100%;
+  height: 100vh;
+  background-color: #f3f4f6;
+}
+
+.body {
+  width: 100%;
+  padding: 5px;
+}
+
+.sidebar {
+  background-color: #0099ff;
+  min-height: 100vh;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+  width: 300px;
+}
+
+.sidebar.collapsed {
+  width: 100px;
+}
+
+.sidebar-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 2rem;
+}
+
+.logo {
+  color: white;
+  font-size: 2rem;
+  font-weight: bold;
+  margin-bottom: 1rem;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+}
+
+.role {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 2rem;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.menu {
+  margin-top: 1rem;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+  color: white;
+}
+
+.menu-item:hover {
+  background: rgba(255, 255, 255, 0.1);
+  transform: translateX(5px);
+}
+
+.active-menu-item {
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.menu-item i {
+  font-size: 1.25rem;
+  margin-right: 1rem;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.menu-item span {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 1rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.content {
+  padding: 10px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  margin-top: 1rem;
+}
+
+/* Animation for collapsed state */
+.sidebar.collapsed .menu-item span {
+  display: none;
+}
+
+.sidebar.collapsed .role {
+  display: none;
+}
+
+.sidebar.collapsed .logo {
+  font-size: 1.5rem;
+  padding: 0.5rem;
+}
+
+/* Smooth transitions */
+.menu-item,
+.sidebar,
+.header i {
+  transition: all 0.3s ease-in-out;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
   .sidebar {
-    background-color: #0099ff;
-    min-height: 100vh;
-    padding: 1.5rem;
-    transition: all 0.3s ease;
-    width: 300px;
-  }
-  
-  .sidebar.collapsed {
     width: 100px;
   }
-  
-  .sidebar-header {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding-bottom: 2rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    margin-bottom: 2rem;
+
+  .sidebar:not(.collapsed) {
+    width: 250px;
   }
-  
-  .logo {
-    color: white;
-    font-size: 2rem;
-    font-weight: bold;
-    margin-bottom: 1rem;
-    background: rgba(255, 255, 255, 0.1);
-    padding: 0.5rem 1rem;
-    border-radius: 8px;
-  }
-  
-  .role {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 2rem;
-    text-align: center;
-    line-height: 1.5;
-  }
-  
-  .menu {
-    margin-top: 1rem;
-  }
-  
-  .menu-item {
-    display: flex;
-    align-items: center;
-    padding: 0.75rem 1rem;
-    margin-bottom: 0.5rem;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    border-radius: 8px;
-    color: white;
-  }
-  
-  .menu-item:hover {
-    background: rgba(255, 255, 255, 0.1);
-    transform: translateX(5px);
-  }
-  
-  .active-menu-item {
-    background: rgba(255, 255, 255, 0.15);
-    border: none;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-  
-  .menu-item i {
-    font-size: 1.25rem;
-    margin-right: 1rem;
-    color: rgba(255, 255, 255, 0.9);
-  }
-  
-  .menu-item span {
-    color: rgba(255, 255, 255, 0.9);
-    font-size: 1rem;
-    font-weight: 500;
-    white-space: nowrap;
-  }
-  
-  .content {
-    padding: 10px;
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
-    margin-top: 1rem;
-  }
-  
-  /* Animation for collapsed state */
-  .sidebar.collapsed .menu-item span {
-    display: none;
-  }
-  
-  .sidebar.collapsed .role {
-    display: none;
-  }
-  
-  .sidebar.collapsed .logo {
-    font-size: 1.5rem;
-    padding: 0.5rem;
-  }
-  
-  /* Smooth transitions */
-  .menu-item,
-  .sidebar,
-  .header i {
-    transition: all 0.3s ease-in-out;
-  }
-  
-  /* Responsive adjustments */
-  @media (max-width: 768px) {
-    .sidebar {
-      width: 100px;
-    }
-    
-    .sidebar:not(.collapsed) {
-      width: 250px;
-    }
-  }
-  
+}

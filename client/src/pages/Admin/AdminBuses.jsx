@@ -97,7 +97,7 @@ function AdminBuses() {
           />
           <Popconfirm
             title="Confirmer la suppression de ce bus ?"
-            onConfirm={() => deleteBus(record._id)}
+            onConfirm={() => deleteBus(record.id)}
             okText="Oui"
             cancelText="Non"
           >
@@ -128,7 +128,7 @@ function AdminBuses() {
         <Table
           columns={columns}
           dataSource={buses}
-          rowKey="_id"
+          rowKey="id"
           pagination={{ pageSize: 6 }}
           bordered
         />

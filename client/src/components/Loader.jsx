@@ -1,9 +1,7 @@
 function Loader() {
   return (
     <div className="spinner-parent">
-<div class="spinner-border" role="status">
-
-</div>
+      <div className="spinner-border" role="status"></div>
     </div>
   );
 }

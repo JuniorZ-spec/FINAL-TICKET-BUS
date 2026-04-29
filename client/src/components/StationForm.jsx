@@ -1,9 +1,16 @@
-import { Form, Modal, Row, Col, message, Input } from 'antd';
-import { HideLoading, ShowLoading } from '../redux/alertsSlice';
-import { useDispatch } from 'react-redux';
-import { axiosInstance } from '../helpers/axiosInstance';
+import { Form, Modal, Row, Col, message, Input } from "antd";
+import { HideLoading, ShowLoading } from "../redux/alertsSlice";
+import { useDispatch } from "react-redux";
+import { axiosInstance } from "../helpers/axiosInstance";
 
-function StationForm({ showStationForm, setShowStationForm, type = "add", getData, selectedStation, setSelectedStation }) {
+function StationForm({
+  showStationForm,
+  setShowStationForm,
+  type = "add",
+  getData,
+  selectedStation,
+  setSelectedStation,
+}) {
   const dispatch = useDispatch();
 
   const onFinish = async (values) => {
@@ -13,9 +20,12 @@ function StationForm({ showStationForm, setShowStationForm, type = "add", getDat
       let response = null;
 
       if (type === "add") {
-        response = await axiosInstance.post('/api/stations/add-station', values);
+        response = await axiosInstance.post("/api/stations/add-station", values);
       } else {
-        response = await axiosInstance.put(`/api/stations/update-station/${selectedStation._id}`, values);
+        response = await axiosInstance.put(
+          `/api/stations/update-station/${selectedStation.id}`,
+          values
+        );
       }
 
       dispatch(HideLoading());
@@ -45,14 +55,14 @@ function StationForm({ showStationForm, setShowStationForm, type = "add", getDat
       }}
       footer={false}
     >
-      <Form
-        layout="vertical"
-        onFinish={onFinish}
-        initialValues={selectedStation || {}}
-      >
+      <Form layout="vertical" onFinish={onFinish} initialValues={selectedStation || {}}>
         <Row gutter={[10, 10]}>
           <Col lg={24} xs={24}>
-            <Form.Item label="Nom de la station" name="name" rules={[{ required: true, message: "Veuillez entrer le nom de la station" }]}>
+            <Form.Item
+              label="Nom de la station"
+              name="name"
+              rules={[{ required: true, message: "Veuillez entrer le nom de la station" }]}
+            >
               <Input placeholder="Entrez le nom de la station" />
             </Form.Item>
           </Col>
@@ -60,7 +70,11 @@ function StationForm({ showStationForm, setShowStationForm, type = "add", getDat
 
         <Row gutter={[10, 10]}>
           <Col lg={24} xs={24}>
-            <Form.Item label="Adresse" name="address" rules={[{ required: true, message: "Veuillez entrer l'adresse de la station" }]}>
+            <Form.Item
+              label="Adresse"
+              name="address"
+              rules={[{ required: true, message: "Veuillez entrer l'adresse de la station" }]}
+            >
               <Input placeholder="Entrez l'adresse de la station" />
             </Form.Item>
           </Col>
@@ -68,18 +82,28 @@ function StationForm({ showStationForm, setShowStationForm, type = "add", getDat
 
         <Row gutter={[10, 10]}>
           <Col lg={24} xs={24}>
-            <Form.Item label="Ville" name="city" rules={[{ required: true, message: "Veuillez entrer la ville" }]}>
+            <Form.Item
+              label="Ville"
+              name="city"
+              rules={[{ required: true, message: "Veuillez entrer la ville" }]}
+            >
               <Input placeholder="Entrez la ville" />
             </Form.Item>
           </Col>
         </Row>
 
         <div className="flex justify-end gap-2">
-          <button type="button"  className="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300 transition"
- onClick={() => setShowStationForm(false)}>
+          <button
+            type="button"
+            className="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300 transition"
+            onClick={() => setShowStationForm(false)}
+          >
             Annuler
           </button>
-          <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition" type="submit">
+          <button
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+            type="submit"
+          >
             Sauvegarder
           </button>
         </div>

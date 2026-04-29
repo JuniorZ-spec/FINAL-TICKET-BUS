@@ -1,10 +1,10 @@
-import React from 'react';
-import { Form, message } from 'antd';
-import { Mail, Lock, Users, User } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import axios from 'axios';
-import { useDispatch } from 'react-redux';
-import { ShowLoading, HideLoading } from '../redux/alertsSlice';
+import React from "react";
+import { Form, message } from "antd";
+import { Mail, Lock, Users, User } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import axios from "axios";
+import { useDispatch } from "react-redux";
+import { ShowLoading, HideLoading } from "../redux/alertsSlice";
 
 function Register() {
   const dispatch = useDispatch();
@@ -17,15 +17,13 @@ function Register() {
       dispatch(HideLoading());
       if (response.data.success) {
         message.success(response.data.message);
-        navigate('/login');
+        navigate("/login");
       } else {
         message.error(response.data.message);
       }
     } catch (error) {
       dispatch(HideLoading());
-      message.error(
-        error.response?.data?.message || "Une erreur est survenue"
-      );
+      message.error(error.response?.data?.message || "Une erreur est survenue");
     }
   };
 
@@ -36,9 +34,7 @@ function Register() {
           <div className="mx-auto h-16 w-16 bg-indigo-100 rounded-full flex items-center justify-center">
             <Users className="h-8 w-8 text-indigo-600" />
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">
-            Créer un compte
-          </h2>
+          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">Créer un compte</h2>
           <p className="mt-2 text-sm text-gray-600">
             Rejoignez Ticket Minute et réservez vos voyages en quelques clics
           </p>
@@ -46,9 +42,11 @@ function Register() {
 
         <Form layout="vertical" className="mt-8 space-y-6" onFinish={onFinish}>
           <div className="space-y-4">
-            <Form.Item name="name" rules={[{ required: true, message: "Veuillez entrer votre nom" }]}>
+            <Form.Item
+              name="name"
+              rules={[{ required: true, message: "Veuillez entrer votre nom" }]}
+            >
               <div className="relative">
-                
                 <input
                   type="text"
                   placeholder="Nom complet"
@@ -57,9 +55,11 @@ function Register() {
               </div>
             </Form.Item>
 
-            <Form.Item name="email" rules={[{ required: true, message: "Veuillez entrer votre email" }]}>
+            <Form.Item
+              name="email"
+              rules={[{ required: true, message: "Veuillez entrer votre email" }]}
+            >
               <div className="relative">
-             
                 <input
                   type="email"
                   placeholder="Adresse email"
@@ -68,9 +68,11 @@ function Register() {
               </div>
             </Form.Item>
 
-            <Form.Item name="password" rules={[{ required: true, message: "Veuillez entrer un mot de passe" }]}>
+            <Form.Item
+              name="password"
+              rules={[{ required: true, message: "Veuillez entrer un mot de passe" }]}
+            >
               <div className="relative">
-               
                 <input
                   type="password"
                   placeholder="Mot de passe"
@@ -91,7 +93,7 @@ function Register() {
 
           <div className="text-center">
             <p className="text-sm text-gray-600">
-              Vous avez déjà un compte ?{' '}
+              Vous avez déjà un compte ?{" "}
               <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
                 Connectez-vous
               </Link>

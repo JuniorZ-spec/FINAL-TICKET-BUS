@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { message, Table, Button } from "antd";
+import { useDispatch } from "react-redux";
+import { message, Table, Button, Tabs } from "antd";
 import { EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { Bus, MapPin, Calendar, CreditCard } from "lucide-react";
 import moment from "moment";
@@ -8,30 +8,33 @@ import moment from "moment";
 import { ShowLoading, HideLoading } from "../../redux/alertsSlice";
 import { axiosInstance } from "../../helpers/axiosInstance";
 import TripForm from "../../components/TripForm";
-import PageTitle from "../../components/PageTitle";
+
+const { TabPane } = Tabs;
 
 function CompanyTrips() {
   const dispatch = useDispatch();
-  const user = useSelector((state) => state.user);
 
-  const [trips, setTrips] = useState([]);
+  const [upcoming, setUpcoming] = useState([]);
+  const [ongoing, setOngoing] = useState([]);
+  const [past, setPast] = useState([]);
   const [showTripForm, setShowTripForm] = useState(false);
   const [selectedTrip, setSelectedTrip] = useState(null);
 
   useEffect(() => {
     getTrips();
-  }, [user]);
+  }, []);
 
   const getTrips = async () => {
     try {
       dispatch(ShowLoading());
-      const response = await axiosInstance.post("/api/trips/get-company-trips", {
-        role: "company",
-      });
+      const response = await axiosInstance.get("/api/companys/get-company-trips");
       dispatch(HideLoading());
 
       if (response.data.success) {
-        setTrips(response.data.data);
+        const { upcoming = [], ongoing = [], past = [] } = response.data.data;
+        setUpcoming(upcoming);
+        setOngoing(ongoing);
+        setPast(past);
       } else {
         message.error(response.data.message);
       }
@@ -54,22 +57,17 @@ function CompanyTrips() {
     }
   };
 
-  const formatStations = (stations) =>
-    Array.isArray(stations) && stations.length > 0
-      ? stations.map((st) => st.name).join(", ")
-      : "N/A";
-
-  const columns = [
+  const getColumns = (editable = true) => [
     {
       title: "Trajet",
       render: (_, record) => (
         <div className="space-y-1 text-sm">
           <div className="flex items-center gap-1">
-            <MapPin className="w-3 h-3 text-green-600" />
+            <MapPin className="w-4 h-4 text-green-600" />
             <span className="text-gray-800">{record.from}</span>
           </div>
           <div className="flex items-center gap-1">
-            <MapPin className="w-3 h-3 text-blue-600" />
+            <MapPin className="w-4 h-4 text-blue-600" />
             <span className="text-gray-800">{record.to}</span>
           </div>
         </div>
@@ -79,14 +77,9 @@ function CompanyTrips() {
       title: "Stations",
       render: (_, record) => (
         <div className="space-y-1 text-sm">
-          <div className="flex items-center gap-1">
-            <span className="font-semibold text-gray-700">Départ :</span>
-            <span className="text-gray-800">{formatStations(record.departureStations)}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <span className="font-semibold text-gray-700">Arrivée :</span>
-            <span className="text-gray-800">{formatStations(record.arrivalStations)}</span>
-          </div>
+          <span className="text-gray-800">{record.departureStation?.name || "N/A"}</span>
+          <br />
+          <span className="text-gray-800">{record.arrivalStation?.name || "N/A"}</span>
         </div>
       ),
     },
@@ -95,18 +88,23 @@ function CompanyTrips() {
       dataIndex: "bus",
       render: (bus) => (
         <div className="flex items-center gap-2 text-sm">
-          <Bus className="w-4 h-4 text-gray-500" />
+          <Bus className="w-5 h-5 text-blue-500" />
           <span>{bus?.name || "N/A"}</span>
         </div>
       ),
     },
     {
-      title: "Date",
-      dataIndex: "date",
-      render: (date) => (
-        <div className="flex items-center gap-2 text-sm">
-          <Calendar className="w-4 h-4 text-gray-500" />
-          <span>{moment(date).format("DD/MM/YYYY")}</span>
+      title: "Date & Heure",
+      render: (_, record) => (
+        <div className="space-y-1 text-sm">
+          <div className="flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-blue-500" />
+            <span>{moment(record.date).format("DD/MM/YYYY")}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-500">🕒</span>
+            <span>{record.departureTime || "N/A"}</span>
+          </div>
         </div>
       ),
     },
@@ -115,39 +113,38 @@ function CompanyTrips() {
       dataIndex: "price",
       render: (price) => (
         <div className="flex items-center gap-2 text-sm">
-          <CreditCard className="w-4 h-4 text-gray-500" />
+          <CreditCard className="w-5 h-5 text-green-500" />
           <span>{price ? `${price.toLocaleString("fr-FR")} FCFA` : "N/A"}</span>
         </div>
       ),
     },
     {
       title: "Actions",
-      render: (_, record) => (
-        <div className="flex gap-2">
-          <Button
-            icon={<EditOutlined />}
-            onClick={() => {
-              setSelectedTrip(record);
-              setShowTripForm(true);
-            }}
-          />
-          <Button
-            icon={<DeleteOutlined />}
-            danger
-            onClick={() => deleteTrip(record._id)}
-          />
-        </div>
-      ),
+      render: (_, record) =>
+        editable ? (
+          <div className="flex gap-2">
+            <Button
+              icon={<EditOutlined />}
+              onClick={() => {
+                setSelectedTrip(record);
+                setShowTripForm(true);
+              }}
+            />
+            <Button icon={<DeleteOutlined />} danger onClick={() => deleteTrip(record.id)} />
+          </div>
+        ) : (
+          <span className="text-gray-400">Indisponible</span>
+        ),
     },
   ];
 
   return (
-    <div className="min-h-screen bg-gray-100 py-6 px-4">
-      <div className="p-6 bg-white shadow-md w-full max-w-6xl mx-auto rounded-lg">
+    <div className="min-h-screen py-3 px-4">
+      <div className="max-w-7xl mx-auto rounded-lg">
         <div className="flex justify-between items-center mb-4">
-          <PageTitle title="Mes Trajets" />
           <Button
             type="primary"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 shadow"
             icon={<PlusOutlined />}
             onClick={() => {
               setSelectedTrip(null);
@@ -158,13 +155,35 @@ function CompanyTrips() {
           </Button>
         </div>
 
-        <Table
-          columns={columns}
-          dataSource={trips}
-          rowKey="_id"
-          pagination={{ pageSize: 5 }}
-          className="rounded-lg border border-gray-200"
-        />
+        <Tabs defaultActiveKey="1">
+          <TabPane tab="À venir" key="1">
+            <Table
+              columns={getColumns(true)}
+              dataSource={upcoming}
+              rowKey="id"
+              pagination={{ pageSize: 4 }}
+              className="rounded-lg border"
+            />
+          </TabPane>
+          <TabPane tab="En cours" key="2">
+            <Table
+              columns={getColumns(false)}
+              dataSource={ongoing}
+              rowKey="id"
+              pagination={{ pageSize: 4 }}
+              className="rounded-lg border"
+            />
+          </TabPane>
+          <TabPane tab="Terminés" key="3">
+            <Table
+              columns={getColumns(false)}
+              dataSource={past}
+              rowKey="id"
+              pagination={{ pageSize: 4 }}
+              className="rounded-lg border"
+            />
+          </TabPane>
+        </Tabs>
 
         {showTripForm && (
           <TripForm

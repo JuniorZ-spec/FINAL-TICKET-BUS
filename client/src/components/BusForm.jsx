@@ -1,10 +1,17 @@
-import { Form, Modal, Row, Col, message, Input, Checkbox } from 'antd';
-import { ShowLoading, HideLoading } from '../redux/alertsSlice';
-import { useDispatch } from 'react-redux';
-import { axiosInstance } from '../helpers/axiosInstance';
-import { useEffect } from 'react';
+import { Form, Modal, Row, Col, message, Input, Checkbox } from "antd";
+import { ShowLoading, HideLoading } from "../redux/alertsSlice";
+import { useDispatch } from "react-redux";
+import { axiosInstance } from "../helpers/axiosInstance";
+import { useEffect } from "react";
 
-function BusForm({ showBusForm, setShowBusForm, type = "add", getData, selectedBus, setSelectedBus }) {
+function BusForm({
+  showBusForm,
+  setShowBusForm,
+  type = "add",
+  getData,
+  selectedBus,
+  setSelectedBus,
+}) {
   const dispatch = useDispatch();
   const [form] = Form.useForm();
 
@@ -12,7 +19,10 @@ function BusForm({ showBusForm, setShowBusForm, type = "add", getData, selectedB
     if (selectedBus) {
       form.setFieldsValue({
         ...selectedBus,
-        services: selectedBus.services || {}  // Ajouter l'objet services
+        services: {
+          airConditioning: selectedBus.airConditioning ?? false,
+          wifi: selectedBus.wifi ?? false,
+        },
       });
     }
   }, [selectedBus, form]);
@@ -20,15 +30,15 @@ function BusForm({ showBusForm, setShowBusForm, type = "add", getData, selectedB
   const onFinish = async (values) => {
     try {
       dispatch(ShowLoading());
-      
+
       let response = null;
 
       if (type === "add") {
-        response = await axiosInstance.post('/api/buses/add-bus', values);
+        response = await axiosInstance.post("/api/buses/add-bus", values);
       } else {
-        response = await axiosInstance.post('/api/buses/update-bus', {
+        response = await axiosInstance.post("/api/buses/update-bus", {
           ...values,
-          _id: selectedBus._id,
+          _id: selectedBus.id,
         });
       }
 
@@ -50,11 +60,11 @@ function BusForm({ showBusForm, setShowBusForm, type = "add", getData, selectedB
 
   const handleCancel = () => {
     setShowBusForm(false);
-    setSelectedBus(null); 
+    setSelectedBus(null);
   };
 
   if (type === "update" && !selectedBus) {
-    return null; 
+    return null;
   }
 
   return (
@@ -65,11 +75,7 @@ function BusForm({ showBusForm, setShowBusForm, type = "add", getData, selectedB
       onCancel={handleCancel}
       footer={false}
     >
-      <Form
-        form={form} 
-        layout="vertical"
-        onFinish={onFinish}
-      >
+      <Form form={form} layout="vertical" onFinish={onFinish}>
         <Row gutter={[10, 10]}>
           <Col lg={24} xs={24}>
             <Form.Item label="Name" name="name" rules={[{ required: true }]}>
@@ -91,20 +97,25 @@ function BusForm({ showBusForm, setShowBusForm, type = "add", getData, selectedB
 
           {/* Services */}
           <Col lg={12} xs={24}>
-            <Form.Item name={['services', 'airConditioning']} valuePropName="checked">
+            <Form.Item name={["services", "airConditioning"]} valuePropName="checked">
               <Checkbox>Climatisation</Checkbox>
             </Form.Item>
           </Col>
 
           <Col lg={12} xs={24}>
-            <Form.Item name={['services', 'wifi']} valuePropName="checked">
+            <Form.Item name={["services", "wifi"]} valuePropName="checked">
               <Checkbox>Wi-Fi</Checkbox>
             </Form.Item>
           </Col>
         </Row>
 
         <div className="d-flex justify-content-end">
-          <button className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition" type="submit">Enregistrer</button>
+          <button
+            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+            type="submit"
+          >
+            Enregistrer
+          </button>
         </div>
       </Form>
     </Modal>

@@ -1,142 +1,125 @@
-.h-screen{
-    height: 100vh;
+.h-screen {
+  height: 100vh;
 }
 
 .w-400 {
-    width: 400px;
+  width: 400px;
 }
-
-body {
-    background: linear-gradient(135deg, #ffffff 0%, #b5cdf7 100%);
-}
-
 
 input {
-    padding: 10px;
-    height: 40px;
-    border: 1px solid rgb(155, 155, 155);
-    
-    background-color: #ffffff;
-    border-radius: 10px;
-    outline: none;
-    transition: all 0.3s ease;  /* Animation fluide */
+  padding: 10px;
+  height: 50px;
+  border: 1px solid rgb(155, 155, 155);
+
+  background-color: #ffffff;
+  border-radius: 10px;
+  outline: none;
+  transition: all 0.3s ease; /* Animation fluide */
 }
 
 input:hover {
-    border: 1px solid #989898;
-    background-color: #ffffff;
+  border: 1px solid #989898;
+  background-color: #ffffff;
 }
-
 
 input:focus {
-    box-shadow: 0 0 8px rgba(5, 147, 255, 0.7); 
-    background-color: #fffefe;
-    border: 1px solid rgb(255, 255, 255);
-    transform: scale(1.05);  
+  box-shadow: 0 0 8px rgba(5, 147, 255, 0.7);
+  background-color: #fffefe;
+  border: 1px solid rgb(255, 255, 255);
+  transform: scale(1);
 }
-
 
 input:focus:hover {
-    border: 1px solid rgb(255, 255, 255);
-    background-color: #fffefe;
+  border: 1px solid rgb(255, 255, 255);
+  background-color: #fffefe;
 }
 
-
-
 .card {
-    border: none;
-    width: 30%;
-    box-shadow: 7px 7px 10px rgba(0, 0, 0, 0.2);
-    border-radius: 15px;
+  border: none;
+  width: 30%;
+  box-shadow: 7px 7px 10px rgba(0, 0, 0, 0.2);
+  border-radius: 15px;
 }
 
 .cardd {
-    border: 1px solid rgb(127, 127, 127);
-    width: 90%;
-    border-radius: 15px;
-    box-shadow: 4x 2px 4px rgba(0, 0, 0, 0.03);
+  border: 1px solid rgb(127, 127, 127);
+  width: 90%;
+  border-radius: 15px;
+  box-shadow: 4x 2px 4px rgba(0, 0, 0, 0.03);
 }
 
-
 .cardd:hover {
-   
-    border:2px solid rgba(131, 196, 245, 0.7);
-    width: 90%;
-    border-radius: 15px;
-    
+  border: 2px solid rgba(131, 196, 245, 0.7);
+  width: 90%;
+  border-radius: 15px;
 }
 
 .underline {
-    text-decoration: underline;
-    cursor: pointer;
+  text-decoration: underline;
+  cursor: pointer;
 }
 
-
-
 .text-2xl {
-    font-size:30px !important;
+  font-size: 30px !important;
 }
 
 .text-xl {
-    font-size:25px !important ;
+  font-size: 25px !important ;
 }
 
 .text-lg {
-    font-size:20px !important;
+  font-size: 20px !important;
 }
 
 .text-md {
-    font-size:16px !important;
+  font-size: 16px !important;
 }
 
-
-.primary-btn{
-    background-color: var(--primary);
-    color : white;
-    border: none;
-    padding: 10px 20px ;
-    cursor: pointer;
+.primary-btn {
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 20px;
+  cursor: pointer;
 }
 
-
-.secondary-btn{
-    background-color: var(--secondary);
-    color : white;
-    border-radius:10px;
-    padding: 10px 20px ;
-    cursor: pointer;
-    width: 100%;
-    box-shadow: #070707;
-    margin-bottom: 15px;
+.secondary-btn {
+  background-color: var(--secondary);
+  color: white;
+  border-radius: 10px;
+  padding: 10px 20px;
+  cursor: pointer;
+  width: 100%;
+  box-shadow: #070707;
+  margin-bottom: 15px;
 }
 
+a {
+  color: rgb(0, 102, 255);
 
-a{
-    color: rgb(0, 102, 255);
-    
-    margin-left: 10px;
+  margin-left: 10px;
 }
 
-i{
-    cursor: pointer;
-    font-size: 25px;
+i {
+  cursor: pointer;
+  font-size: 25px;
 }
-.spinner-parent{
-    position : absolute;
-    top :0;
-    left :0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color:rgba(0 ,0, 0, 0.507);
-    z-index: 10000;
-    
+.spinner-parent {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.507);
+  z-index: 10000;
 }
 
-.spinner-border{
-    color:aliceblue !important;
-    height: 80px !important;
-    width: 80px !important;
+.spinner-border {
+  color: aliceblue !important;
+  height: 80px !important;
+  width: 80px !important;
 }

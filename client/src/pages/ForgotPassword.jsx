@@ -1,12 +1,12 @@
-import React from 'react';
-import { Form, message } from 'antd';
-import { Mail } from 'lucide-react';
-import { axiosInstance } from '../helpers/axiosInstance';
+import React from "react";
+import { Form, message } from "antd";
+import { Mail } from "lucide-react";
+import { axiosInstance } from "../helpers/axiosInstance";
 
 function ForgotPassword() {
   const onFinish = async (values) => {
     try {
-      const response = await axiosInstance.post('/api/users/send-reset-password-email', values);
+      const response = await axiosInstance.post("/api/users/send-reset-password-email", values);
 
       if (response.data.success) {
         message.success(response.data.message);
@@ -14,7 +14,7 @@ function ForgotPassword() {
         message.error(response.data.message);
       }
     } catch (error) {
-      message.error('Une erreur est survenue');
+      message.error("Une erreur est survenue");
     }
   };
 
@@ -26,7 +26,7 @@ function ForgotPassword() {
           <Form.Item
             name="email"
             label="Adresse e-mail"
-            rules={[{ required: true, message: 'Veuillez entrer votre e-mail' }]}
+            rules={[{ required: true, message: "Veuillez entrer votre e-mail" }]}
           >
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />

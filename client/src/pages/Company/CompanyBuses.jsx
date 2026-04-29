@@ -1,11 +1,13 @@
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { message, Table, Button, Popconfirm } from "antd";
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import { Bus, User, Settings, Users } from "lucide-react";
+
 import { ShowLoading, HideLoading } from "../../redux/alertsSlice";
+import { axiosInstance } from "../../helpers/axiosInstance";
 import BusForm from "../../components/BusForm";
 import PageTitle from "../../components/PageTitle";
-import { useEffect, useState } from "react";
-import { message, Table, Button, Popconfirm } from "antd";
-import { useDispatch, useSelector } from "react-redux";
-import { axiosInstance } from "../../helpers/axiosInstance";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 
 function CompanyBuses() {
   const dispatch = useDispatch();
@@ -17,22 +19,19 @@ function CompanyBuses() {
   const getBuses = async () => {
     try {
       dispatch(ShowLoading());
-      console.log("🧾 Rôle de l'utilisateur :", user.role);
-      console.log("👤 ID de l'utilisateur :", user._id);
-
       const response = await axiosInstance.post("/api/buses/get-buses-company", {
         role: "company",
       });
-
       dispatch(HideLoading());
+
       if (response.data.success) {
         setBuses(response.data.data);
       } else {
-        message.error(response.data.message || "No buses found");
+        message.error(response.data.message || "Aucun bus trouvé");
       }
     } catch (error) {
       dispatch(HideLoading());
-      message.error(error.response?.data?.message || "Error fetching buses");
+      message.error(error.response?.data?.message || "Erreur de chargement");
     }
   };
 
@@ -42,72 +41,75 @@ function CompanyBuses() {
       const response = await axiosInstance.post("/api/buses/delete-bus", { _id: id });
       dispatch(HideLoading());
       if (response.data.success) {
-        message.success(response.data.message);
+        message.success("Bus supprimé");
         getBuses();
       } else {
-        message.error(response.data.message || "Failed to delete bus");
+        message.error(response.data.message || "Échec de la suppression");
       }
     } catch (error) {
       dispatch(HideLoading());
-      message.error(error.response?.data?.message || "Error deleting bus");
+      message.error(error.response?.data?.message || "Erreur lors de la suppression");
     }
   };
 
   const columns = [
     {
-      title: "Numéro du Bus",
-      dataIndex: "number",
-      key: "number",
-      render: (number) => number || "N/A",
-    },
-    {
-      title: "Nom du Bus",
-      dataIndex: "name",
-      key: "name",
-      render: (name) => name || "N/A",
+      title: "Bus",
+      render: (_, record) => (
+        <div className="space-y-1 text-sm">
+          <div className="flex items-center gap-2">
+            <Bus className="w-4 h-4 text-blue-600" />
+            <span className="font-semibold text-gray-800">{record.name || "N/A"}</span>
+          </div>
+          <div className="flex items-center gap-2 text-gray-600 text-xs">
+            <span className="text-gray-500">N°:</span> {record.number || "—"}
+          </div>
+        </div>
+      ),
     },
     {
       title: "Capacité",
       dataIndex: "capacity",
-      key: "capacity",
-      render: (capacity) => capacity || "N/A",
+      render: (capacity) => (
+        <div className="flex items-center gap-2 text-sm text-gray-700">
+          <Users className="w-4 h-4 text-indigo-500" />
+          <span>{capacity || "N/A"} places</span>
+        </div>
+      ),
     },
     {
       title: "Services",
       key: "services",
-      render: (text, record) => (
-        <span className="flex gap-2">
-          {record.services?.airConditioning && (
-            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+      render: (_, record) => (
+        <div className="flex gap-2 flex-wrap">
+          {record.airConditioning && (
+            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">
               Climatisation
             </span>
           )}
-          {record.services?.wifi && (
-            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs">
+          {record.wifi && (
+            <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold">
               Wi-Fi
             </span>
           )}
-          {!record.services?.airConditioning && !record.services?.wifi && "N/A"}
-        </span>
+          {!record.airConditioning && !record.wifi && (
+            <span className="text-gray-400 text-xs">Aucun</span>
+          )}
+        </div>
       ),
     },
     {
       title: "Actions",
-      key: "action",
+      key: "actions",
       render: (_, record) => (
         <div className="flex gap-2">
           <Popconfirm
             title="Supprimer ce bus ?"
-            onConfirm={() => deleteBus(record._id)}
+            onConfirm={() => deleteBus(record.id)}
             okText="Oui"
             cancelText="Non"
           >
-            <Button
-              type="default"
-              danger
-              icon={<DeleteOutlined />}
-              className="hover:bg-red-50"
-            />
+            <Button type="default" danger icon={<DeleteOutlined />} className="hover:bg-red-50" />
           </Popconfirm>
           <Button
             type="default"
@@ -128,43 +130,43 @@ function CompanyBuses() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gray-100 py-6 px-4">
-      <div className="p-6 bg-white shadow-md w-full max-w-6xl mx-auto rounded-lg overflow-auto">
+    <div className="min-h-screen pt-2 py-6 px-4 bg-gray-100">
+      <div className="  rounded-lg  w-full max-w-6xl mx-auto">
         <div className="flex justify-between items-center mb-4">
-          <PageTitle title="Mes Bus" />
           <Button
             type="primary"
             icon={<PlusOutlined />}
-            onClick={() => setShowBusForm(true)}
+            onClick={() => {
+              setSelectedBus(null);
+              setShowBusForm(true);
+            }}
+            className="bg-blue-600 text-white mx-6 px-3 py-3 rounded-lg hover:bg-blue-700 transition-colors font-bold shadow-lg"
           >
             Ajouter Bus
           </Button>
         </div>
-  
-        <div className="overflow-x-auto">
-          <Table
-            className="mt-4 rounded-lg border border-gray-200"
-            columns={columns}
-            dataSource={buses}
-            rowKey="_id"
-            pagination={{ pageSize: 5, showSizeChanger: true }}
-          />
-        </div>
-  
+
+        <Table
+          className="rounded-lg border border-gray-200"
+          columns={columns}
+          dataSource={buses}
+          rowKey="id"
+          pagination={{ pageSize: 5, showSizeChanger: true }}
+        />
+
         {showBusForm && (
           <BusForm
             showBusForm={showBusForm}
             setShowBusForm={setShowBusForm}
-            type={selectedBus ? "update" : "add"}
             selectedBus={selectedBus}
             setSelectedBus={setSelectedBus}
+            type={selectedBus ? "update" : "add"}
             getData={getBuses}
           />
         )}
       </div>
     </div>
   );
-  
 }
 
 export default CompanyBuses;

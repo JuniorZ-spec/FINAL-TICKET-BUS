@@ -1,12 +1,10 @@
 @import "tailwindcss";
 
-
-
-:root{
+:root {
   --primary: rgb(0, 0, 0);
-  --secondary:rgb(0, 183, 255);
+  --secondary: rgb(0, 183, 255);
 }
 
-
-
-
+body {
+  @apply font-sans;
+}
