@@ -19,7 +19,7 @@ jobs:
       - name: Installer Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
@@ -47,7 +47,7 @@ jobs:
       - name: Installer Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: client/package-lock.json
 
@@ -58,6 +58,8 @@ jobs:
       - name: ESLint
         run: npx eslint src --ext .js,.jsx
         working-directory: client
+        env:
+          ESLINT_USE_FLAT_CONFIG: "false"
 
       - name: Prettier — vérification du formatage
         run: npx prettier --check src
