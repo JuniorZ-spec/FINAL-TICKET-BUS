@@ -60,7 +60,7 @@ jobs:
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.ECR_REGISTRY }}
+            aws ecr get-login-password --region eu-west-3 | docker login --username AWS --password-stdin 915993062361.dkr.ecr.eu-west-3.amazonaws.com
             docker compose -f /home/ubuntu/docker-compose.prod.yml pull
             docker compose -f /home/ubuntu/docker-compose.prod.yml up -d --remove-orphans
             docker image prune -f
