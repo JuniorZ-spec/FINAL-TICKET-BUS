@@ -261,7 +261,7 @@ exports.updateUserPermissions = async (req, res) => {
       return res.status(404).json({ success: false, message: "Utilisateur non trouvé" });
     }
 
-    const data = {};
+    const data: Record<string, any> = {};
     if (role !== undefined) data.role = role.toUpperCase();
     if (isBlocked !== undefined) data.isBlocked = isBlocked;
 
