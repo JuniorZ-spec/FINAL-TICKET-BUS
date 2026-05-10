@@ -134,9 +134,9 @@ exports.getUserBookings = async (req, res) => {
 exports.getCompanyBookings = async (req, res) => {
   try {
     const bookings = await prisma.booking.findMany({
-      where: { companyId: req.user.userId },
+      where: { companyId: req.user.companyId },
       include: {
-        user: { select: { name: true, email: true } },
+        user: { select: { email: true, travelerProfile: { select: { name: true } } } },
         trip: {
           include: {
             departureStation: true,
@@ -156,7 +156,7 @@ exports.getAllBookings = async (req, res) => {
   try {
     const bookings = await prisma.booking.findMany({
       include: {
-        user: { select: { name: true, email: true } },
+        user: { select: { email: true, travelerProfile: { select: { name: true } } } },
         company: { select: { companyName: true } },
         trip: {
           include: {

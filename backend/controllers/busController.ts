@@ -3,7 +3,7 @@ const prisma = require("../prismaClient");
 exports.getCompanyBuses = async (req, res) => {
   try {
     const buses = await prisma.bus.findMany({
-      where: { companyId: req.user.userId },
+      where: { companyId: req.user.companyId },
       include: { company: { select: { companyName: true } } },
     });
     res.status(200).json({ success: true, data: buses });
@@ -23,7 +23,7 @@ exports.addBus = async (req, res) => {
         capacity: parseInt(capacity),
         airConditioning: services?.airConditioning || false,
         wifi: services?.wifi || false,
-        companyId: req.user.userId,
+        companyId: req.user.companyId,
       },
     });
 

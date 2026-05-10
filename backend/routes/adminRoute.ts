@@ -3,7 +3,7 @@ const authMiddleware = require("../middlewares/authMiddleware");
 const requireRole = require("../middlewares/requireRole");
 const adminController = require("../controllers/adminController");
 
-const auth = [authMiddleware, requireRole("admin")];
+const auth = [authMiddleware, requireRole("ADMIN")];
 
 router.post("/create-company", ...auth, adminController.createCompany);
 router.get("/get-all-companies", ...auth, adminController.getAllCompanies);

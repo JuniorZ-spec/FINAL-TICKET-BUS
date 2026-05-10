@@ -5,7 +5,7 @@ exports.addStation = async (req, res) => {
     const { name, address, city } = req.body;
 
     const station = await prisma.station.create({
-      data: { name, address, city, companyId: req.user.userId },
+      data: { name, address, city, companyId: req.user.companyId },
     });
 
     res.status(201).json({ success: true, message: "Station ajoutée avec succès", data: station });
