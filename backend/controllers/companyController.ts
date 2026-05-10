@@ -1,45 +1,9 @@
 const prisma = require("../prismaClient");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-
-exports.login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    const company = await prisma.company.findUnique({ where: { email } });
-    if (!company) {
-      return res.status(400).json({ success: false, message: "Identifiants invalides" });
-    }
-    if (company.isBlocked) {
-      return res
-        .status(403)
-        .json({ success: false, message: "Compte bloqué, contactez l'administrateur" });
-    }
-
-    const isMatch = await bcrypt.compare(password, company.password);
-    if (!isMatch) {
-      return res.status(400).json({ success: false, message: "Identifiants invalides" });
-    }
-
-    const token = jwt.sign({ userId: company.id, role: "company" }, process.env.jwt_secret, {
-      expiresIn: "1d",
-    });
-
-    res.status(200).json({
-      success: true,
-      message: "Connexion réussie",
-      token,
-      data: { companyName: company.companyName, email: company.email, id: company.id },
-    });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
 
 exports.getCompanyInfo = async (req, res) => {
   try {
     const company = await prisma.company.findUnique({
-      where: { id: req.user.userId },
+      where: { id: req.user.companyId },
       select: { id: true, companyName: true, email: true, isBlocked: true, createdAt: true },
     });
     if (!company) {
@@ -51,35 +15,10 @@ exports.getCompanyInfo = async (req, res) => {
   }
 };
 
-exports.changePassword = async (req, res) => {
-  try {
-    const { currentPassword, newPassword } = req.body;
-
-    const company = await prisma.company.findUnique({ where: { id: req.user.userId } });
-    if (!company) {
-      return res.status(404).json({ success: false, message: "Compagnie introuvable" });
-    }
-
-    const isMatch = await bcrypt.compare(currentPassword, company.password);
-    if (!isMatch) {
-      return res.status(400).json({ success: false, message: "Mot de passe actuel incorrect" });
-    }
-
-    await prisma.company.update({
-      where: { id: req.user.userId },
-      data: { password: await bcrypt.hash(newPassword, 10) },
-    });
-
-    res.status(200).json({ success: true, message: "Mot de passe modifié avec succès" });
-  } catch (error) {
-    res.status(500).json({ success: false, message: error.message });
-  }
-};
-
 exports.getCompanyTrips = async (req, res) => {
   try {
     const trips = await prisma.trip.findMany({
-      where: { companyId: req.user.userId },
+      where: { companyId: req.user.companyId },
       include: {
         bus: true,
         departureStation: true,
@@ -111,7 +50,7 @@ exports.getCompanyTrips = async (req, res) => {
 
 exports.getDashboardStats = async (req, res) => {
   try {
-    const companyId = req.user.userId;
+    const companyId = req.user.companyId;
 
     const [bookings, trips, busesCount, stationsCount] = await Promise.all([
       prisma.booking.findMany({ where: { companyId } }),
@@ -153,7 +92,7 @@ exports.getAllCompanies = async (req, res) => {
 
 exports.getCompanyStations = async (req, res) => {
   try {
-    const stations = await prisma.station.findMany({ where: { companyId: req.user.userId } });
+    const stations = await prisma.station.findMany({ where: { companyId: req.user.companyId } });
     res.status(200).json({ success: true, data: stations });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
@@ -162,7 +101,7 @@ exports.getCompanyStations = async (req, res) => {
 
 exports.getBookingsPerDay = async (req, res) => {
   try {
-    const bookings = await prisma.booking.findMany({ where: { companyId: req.user.userId } });
+    const bookings = await prisma.booking.findMany({ where: { companyId: req.user.companyId } });
 
     const result = {};
     bookings.forEach((b) => {

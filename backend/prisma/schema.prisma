@@ -12,9 +12,22 @@ datasource db {
 // Enums
 // ─────────────────────────────────────────
 
-enum UserRole {
-  USER
+enum UserType {
+  TRAVELER
+  COMPANY_MEMBER
   ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+enum CompanyMemberRole {
+  OWNER
+  MANAGER
+  AGENT
 }
 
 enum BookingStatus {
@@ -24,43 +37,118 @@ enum BookingStatus {
 }
 
 // ─────────────────────────────────────────
-// Models
+// Auth — central user table
 // ─────────────────────────────────────────
 
 model User {
-  id                  String    @id @default(cuid())
-  name                String?
-  email               String    @unique
-  password            String
-  role                UserRole  @default(USER)
-  phone               String?
-  address             String?
-  isBlocked           Boolean   @default(false)
-  resetPasswordToken  String?
-  resetPasswordExpire DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  id        String     @id @default(cuid())
+  email     String     @unique
+  password  String
+  userType  UserType   @default(TRAVELER)
+  status    UserStatus @default(PENDING_VERIFICATION)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
-  bookings Booking[]
-  reviews  Review[]
+  travelerProfile TravelerProfile?
+  companyMember   CompanyMember?
+  adminProfile    AdminProfile?
+  sessions        UserSession[]
+  auditLogs       AuditLog[]
+  bookings        Booking[]
+  reviews         Review[]
 }
 
-model Company {
-  id                  String    @id @default(cuid())
-  companyName         String    @unique
-  email               String    @unique
-  password            String
-  isBlocked           Boolean   @default(false)
-  resetPasswordToken  String?
-  resetPasswordExpire DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+model TravelerProfile {
+  id      String  @id @default(cuid())
+  userId  String  @unique
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name    String?
+  phone   String?
+  address String?
+}
 
-  buses    Bus[]
-  stations Station[]
-  trips    Trip[]
-  bookings Booking[]
-  reviews  Review[]
+model CompanyMember {
+  id        String            @id @default(cuid())
+  userId    String            @unique
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId String
+  company   Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  role      CompanyMemberRole @default(AGENT)
+  createdAt DateTime          @default(now())
+
+  @@index([companyId])
+}
+
+model AdminProfile {
+  id     String  @id @default(cuid())
+  userId String  @unique
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name   String?
+}
+
+// ─────────────────────────────────────────
+// Sessions & security
+// ─────────────────────────────────────────
+
+model UserSession {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken String   @unique
+  expiresAt    DateTime
+  userAgent    String?
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Invitation {
+  id        String            @id @default(cuid())
+  email     String
+  companyId String
+  company   Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  role      CompanyMemberRole @default(AGENT)
+  token     String            @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime          @default(now())
+
+  @@index([companyId])
+  @@index([email])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  metadata  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────
+// Business models
+// ─────────────────────────────────────────
+
+model Company {
+  id          String   @id @default(cuid())
+  companyName String   @unique
+  email       String   @unique
+  isBlocked   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     CompanyMember[]
+  invitations Invitation[]
+  buses       Bus[]
+  stations    Station[]
+  trips       Trip[]
+  bookings    Booking[]
+  reviews     Review[]
 }
 
 model Bus {

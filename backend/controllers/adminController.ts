@@ -8,20 +8,34 @@ exports.createCompany = async (req, res) => {
       return res.status(400).json({ success: false, message: "Tous les champs sont requis" });
     }
 
-    const existing = await prisma.company.findFirst({
+    const existingCompany = await prisma.company.findFirst({
       where: { OR: [{ email }, { companyName }] },
     });
-    if (existing) {
-      const field = existing.email === email ? "email" : "companyName";
+    if (existingCompany) {
+      const field = existingCompany.email === email ? "email" : "companyName";
       return res.status(409).json({ success: false, message: `${field} déjà utilisé` });
     }
 
-    const company = await prisma.company.create({
-      data: { email, companyName, password: await bcrypt.hash(password, 10) },
+    const existingUser = await prisma.user.findUnique({ where: { email } });
+    if (existingUser) {
+      return res.status(409).json({ success: false, message: "Un compte avec cet email existe déjà" });
+    }
+
+    const [company, user] = await prisma.$transaction(async (tx) => {
+      const c = await tx.company.create({ data: { companyName, email } });
+      const u = await tx.user.create({
+        data: {
+          email,
+          password: await bcrypt.hash(password, 10),
+          userType: "COMPANY_MEMBER",
+          status: "ACTIVE",
+          companyMember: { create: { companyId: c.id, role: "OWNER" } },
+        },
+      });
+      return [c, u];
     });
 
-    const { password: _, ...data } = company;
-    res.status(201).json({ success: true, message: "Compagnie créée avec succès", data });
+    res.status(201).json({ success: true, message: "Compagnie créée avec succès", data: { company, ownerId: user.id } });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -41,8 +55,14 @@ exports.getAllCompanies = async (req, res) => {
 exports.getAllUsers = async (req, res) => {
   try {
     const users = await prisma.user.findMany({
-      where: { role: "USER" },
-      select: { id: true, name: true, email: true, phone: true, isBlocked: true, createdAt: true },
+      where: { userType: "TRAVELER" },
+      select: {
+        id: true,
+        email: true,
+        status: true,
+        createdAt: true,
+        travelerProfile: { select: { name: true, phone: true } },
+      },
     });
     res.status(200).json({ success: true, data: users });
   } catch (error) {
@@ -68,7 +88,7 @@ exports.deleteUser = async (req, res) => {
   try {
     const { userId } = req.body;
     const user = await prisma.user.findUnique({ where: { id: userId } });
-    if (!user || user.role !== "USER") {
+    if (!user || user.userType !== "TRAVELER") {
       return res.status(404).json({ success: false, message: "Utilisateur non trouvé" });
     }
     await prisma.user.delete({ where: { id: userId } });
@@ -255,15 +275,15 @@ exports.getAllStations = async (req, res) => {
 
 exports.updateUserPermissions = async (req, res) => {
   try {
-    const { id, role, isBlocked } = req.body;
+    const { id, userType, status } = req.body;
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) {
       return res.status(404).json({ success: false, message: "Utilisateur non trouvé" });
     }
 
     const data: Record<string, any> = {};
-    if (role !== undefined) data.role = role.toUpperCase();
-    if (isBlocked !== undefined) data.isBlocked = isBlocked;
+    if (userType !== undefined) data.userType = userType.toUpperCase();
+    if (status !== undefined) data.status = status.toUpperCase();
 
     await prisma.user.update({ where: { id }, data });
     res.status(200).json({ success: true, message: "Permissions mises à jour" });

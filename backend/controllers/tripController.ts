@@ -28,7 +28,7 @@ exports.addTrip = async (req, res) => {
         date: new Date(date),
         departureTime,
         price: parseFloat(price),
-        companyId: req.user.userId,
+        companyId: req.user.companyId,
         busId,
         departureStationId,
         arrivalStationId,
