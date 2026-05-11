@@ -18,7 +18,9 @@ exports.createCompany = async (req, res) => {
 
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
-      return res.status(409).json({ success: false, message: "Un compte avec cet email existe déjà" });
+      return res
+        .status(409)
+        .json({ success: false, message: "Un compte avec cet email existe déjà" });
     }
 
     const [company, user] = await prisma.$transaction(async (tx) => {
@@ -35,7 +37,11 @@ exports.createCompany = async (req, res) => {
       return [c, u];
     });
 
-    res.status(201).json({ success: true, message: "Compagnie créée avec succès", data: { company, ownerId: user.id } });
+    res.status(201).json({
+      success: true,
+      message: "Compagnie créée avec succès",
+      data: { company, ownerId: user.id },
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
