@@ -61,7 +61,9 @@ exports.loginTraveler = async (req, res) => {
       return res.status(400).json({ success: false, message: "Identifiants invalides" });
     }
     if (user.status === "SUSPENDED") {
-      return res.status(403).json({ success: false, message: "Compte suspendu, contactez l'administrateur" });
+      return res
+        .status(403)
+        .json({ success: false, message: "Compte suspendu, contactez l'administrateur" });
     }
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) {
@@ -69,7 +71,9 @@ exports.loginTraveler = async (req, res) => {
     }
     const accessToken = signAccessToken({ userId: user.id, userType: user.userType });
     const refreshToken = await createSession(user.id, req);
-    res.status(200).json({ success: true, message: "Connexion réussie", data: { accessToken, refreshToken } });
+    res
+      .status(200)
+      .json({ success: true, message: "Connexion réussie", data: { accessToken, refreshToken } });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -90,10 +94,14 @@ exports.loginCompanyMember = async (req, res) => {
       return res.status(400).json({ success: false, message: "Identifiants invalides" });
     }
     if (user.status === "SUSPENDED") {
-      return res.status(403).json({ success: false, message: "Compte suspendu, contactez l'administrateur" });
+      return res
+        .status(403)
+        .json({ success: false, message: "Compte suspendu, contactez l'administrateur" });
     }
     if (user.companyMember.company.isBlocked) {
-      return res.status(403).json({ success: false, message: "Compagnie bloquée, contactez l'administrateur" });
+      return res
+        .status(403)
+        .json({ success: false, message: "Compagnie bloquée, contactez l'administrateur" });
     }
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) {
@@ -108,7 +116,10 @@ exports.loginCompanyMember = async (req, res) => {
       data: {
         accessToken,
         refreshToken,
-        company: { id: user.companyMember.company.id, companyName: user.companyMember.company.companyName },
+        company: {
+          id: user.companyMember.company.id,
+          companyName: user.companyMember.company.companyName,
+        },
       },
     });
   } catch (error) {
@@ -132,7 +143,9 @@ exports.loginAdmin = async (req, res) => {
     }
     const accessToken = signAccessToken({ userId: user.id, userType: user.userType });
     const refreshToken = await createSession(user.id, req);
-    res.status(200).json({ success: true, message: "Connexion réussie", data: { accessToken, refreshToken } });
+    res
+      .status(200)
+      .json({ success: true, message: "Connexion réussie", data: { accessToken, refreshToken } });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -150,7 +163,9 @@ exports.refreshAccessToken = async (req, res) => {
     });
     if (!session || session.expiresAt < new Date()) {
       if (session) await prisma.userSession.delete({ where: { id: session.id } });
-      return res.status(401).json({ success: false, message: "Session expirée, veuillez vous reconnecter" });
+      return res
+        .status(401)
+        .json({ success: false, message: "Session expirée, veuillez vous reconnecter" });
     }
     const { user } = session;
     const payload: Record<string, any> = { userId: user.id, userType: user.userType };
