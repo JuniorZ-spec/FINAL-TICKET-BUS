@@ -4,13 +4,15 @@
     "es2022": true
   },
   "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint"],
   "parserOptions": {
     "ecmaVersion": "latest"
   },
   "extends": ["eslint:recommended", "plugin:prettier/recommended"],
   "ignorePatterns": ["dist/", "node_modules/", "prisma.config.ts"],
   "rules": {
-    "no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
+    "no-unused-vars": "off",
+    "@typescript-eslint/no-unused-vars": ["warn", { "argsIgnorePattern": "^_" }],
     "no-undef": "off",
     "no-console": "off"
   }
