@@ -28,7 +28,7 @@ jobs:
         working-directory: backend
 
       - name: ESLint
-        run: npx eslint . --ext .js
+        run: npx eslint . --ext .ts,.tsx
         working-directory: backend
 
       - name: Prettier — vérification du formatage
@@ -56,7 +56,7 @@ jobs:
         working-directory: client
 
       - name: ESLint
-        run: npx eslint src --ext .js,.jsx
+        run: npx eslint src --ext .ts,.tsx
         working-directory: client
         env:
           ESLINT_USE_FLAT_CONFIG: "false"
