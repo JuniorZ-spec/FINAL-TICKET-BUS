@@ -18,6 +18,8 @@ module.exports = (req, res, next) => {
 
     next();
   } catch (error) {
-    return res.status(401).json({ success: false, message: "Authentification échouée", error: error.message });
+    return res
+      .status(401)
+      .json({ success: false, message: "Authentification échouée", error: error.message });
   }
 };
