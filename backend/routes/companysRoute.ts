@@ -11,5 +11,6 @@ router.get("/get-dashboard-stats", ...companyAuth, companyController.getDashboar
 router.get("/get-all-companies", authMiddleware, companyController.getAllCompanies);
 router.get("/get-company-stations", ...companyAuth, companyController.getCompanyStations);
 router.get("/get-bookings-per-day", ...companyAuth, companyController.getBookingsPerDay);
+router.post("/apply", companyController.applyForPartnership);
 
 module.exports = router;

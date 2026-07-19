@@ -7,11 +7,16 @@ const Header = ({ title, role }) => {
 
   return (
     <header className="bg-white border-b border-gray-200 px-6 sticky top-0 z-10">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between py-3">
         {/* Titre & Rôle */}
-        <div className="pt-2 px-6">
-          <h7 className="text-lg font-bold text-gray-900">{title}</h7>
-          <p className="text-sm text-gray-500">Gérez votre plateforme de réservation</p>
+        <div className="px-6">
+          <h2 className="text-lg font-bold text-anthracite">{title}</h2>
+          <p className="text-sm text-anthracite/50">
+            {user?.role === "company"
+              ? "Tableau de bord compagnie"
+              : "Tableau de bord opérationnel"}{" "}
+            · {new Date().toLocaleDateString("fr-FR")}
+          </p>
         </div>
 
         {/* Barre de recherche + Notifications + User */}
@@ -20,18 +25,18 @@ const Header = ({ title, role }) => {
             <input
               type="text"
               placeholder="Rechercher..."
-              className="pl-4 pr-12 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="pl-4 pr-12 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-terracotta/30 focus:border-terracotta"
               style={{ height: "40px" }}
             />
           </div>
 
-          <div className="flex items-center  space-x-3">
-            <p className="text-xl font-semiblod pt-4 text-gray-400">
+          <div className="flex items-center space-x-3">
+            <p className="text-sm font-semibold text-anthracite/70">
               {user?.role === "company" ? user?.companyName : user?.name}
             </p>
 
-            <div className="w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center">
-              <User className="w-7 h-7 text-white" />
+            <div className="w-10 h-10 bg-terracotta rounded-full flex items-center justify-center">
+              <User className="w-5 h-5 text-white" />
             </div>
           </div>
         </div>

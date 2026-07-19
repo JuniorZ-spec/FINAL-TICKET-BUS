@@ -24,7 +24,7 @@ exports.createCompany = async (req, res) => {
     }
 
     const [company, user] = await prisma.$transaction(async (tx) => {
-      const c = await tx.company.create({ data: { companyName, email } });
+      const c = await tx.company.create({ data: { companyName, email, status: "VERIFIED" } });
       const u = await tx.user.create({
         data: {
           email,
@@ -50,9 +50,128 @@ exports.createCompany = async (req, res) => {
 exports.getAllCompanies = async (req, res) => {
   try {
     const companies = await prisma.company.findMany({
-      select: { id: true, companyName: true, email: true, isBlocked: true, createdAt: true },
+      where: { status: { in: ["VERIFIED", "SUSPENDED"] } },
+      select: {
+        id: true,
+        companyName: true,
+        email: true,
+        status: true,
+        rccm: true,
+        ifu: true,
+        createdAt: true,
+        _count: { select: { trips: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    const data = await Promise.all(
+      companies.map(async (company) => {
+        const [trips, bookings] = await Promise.all([
+          prisma.trip.findMany({ where: { companyId: company.id }, select: { id: true, price: true } }),
+          prisma.booking.findMany({ where: { companyId: company.id }, select: { tripId: true, seats: true } }),
+        ]);
+        const revenue = bookings.reduce((sum, b) => {
+          const trip = trips.find((t) => t.id === b.tripId);
+          return sum + (trip ? trip.price * b.seats.length : 0);
+        }, 0);
+        return {
+          id: company.id,
+          companyName: company.companyName,
+          email: company.email,
+          status: company.status,
+          rccm: company.rccm,
+          ifu: company.ifu,
+          createdAt: company.createdAt,
+          tripsCount: company._count.trips,
+          revenue,
+        };
+      })
+    );
+
+    res.status(200).json({ success: true, data });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getPendingCompanies = async (req, res) => {
+  try {
+    const companies = await prisma.company.findMany({
+      where: { status: "PENDING" },
+      orderBy: { requestedAt: "desc" },
     });
     res.status(200).json({ success: true, data: companies });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.approveCompany = async (req, res) => {
+  try {
+    const { companyId, password } = req.body;
+    if (!companyId || !password) {
+      return res
+        .status(400)
+        .json({ success: false, message: "companyId et mot de passe requis" });
+    }
+
+    const company = await prisma.company.findUnique({ where: { id: companyId } });
+    if (!company || company.status !== "PENDING") {
+      return res.status(404).json({ success: false, message: "Demande introuvable" });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email: company.email } });
+    if (existingUser) {
+      return res
+        .status(409)
+        .json({ success: false, message: "Un compte avec cet email existe déjà" });
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.company.update({ where: { id: companyId }, data: { status: "VERIFIED" } });
+      await tx.user.create({
+        data: {
+          email: company.email,
+          password: await bcrypt.hash(password, 10),
+          userType: "COMPANY_MEMBER",
+          status: "ACTIVE",
+          companyMember: { create: { companyId, role: "OWNER" } },
+        },
+      });
+    });
+
+    res.status(200).json({ success: true, message: "Compagnie validée avec succès" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.rejectCompany = async (req, res) => {
+  try {
+    const { companyId } = req.body;
+    const company = await prisma.company.findUnique({ where: { id: companyId } });
+    if (!company || company.status !== "PENDING") {
+      return res.status(404).json({ success: false, message: "Demande introuvable" });
+    }
+    await prisma.company.update({ where: { id: companyId }, data: { status: "REJECTED" } });
+    res.status(200).json({ success: true, message: "Demande refusée" });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.setCompanyStatus = async (req, res) => {
+  try {
+    const { companyId, status } = req.body;
+    if (!["VERIFIED", "SUSPENDED"].includes(status)) {
+      return res.status(400).json({ success: false, message: "Statut invalide" });
+    }
+    const company = await prisma.company.findUnique({ where: { id: companyId } });
+    if (!company) {
+      return res.status(404).json({ success: false, message: "Compagnie non trouvée" });
+    }
+    await prisma.company.update({ where: { id: companyId }, data: { status } });
+    res.status(200).json({ success: true, message: "Statut mis à jour" });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -106,11 +225,26 @@ exports.deleteUser = async (req, res) => {
 
 exports.getDashboardStats = async (req, res) => {
   try {
-    const [companiesCount, tripsCount, bookings, trips] = await Promise.all([
-      prisma.company.count(),
+    const [
+      companiesCount,
+      pendingCompaniesCount,
+      tripsCount,
+      bookings,
+      trips,
+      parcelsInCirculation,
+      parcelsAwaitingPickup,
+      openDisputes,
+      highPriorityDisputes,
+    ] = await Promise.all([
+      prisma.company.count({ where: { status: "VERIFIED" } }),
+      prisma.company.count({ where: { status: "PENDING" } }),
       prisma.trip.count(),
       prisma.booking.findMany(),
       prisma.trip.findMany({ select: { id: true, price: true } }),
+      prisma.parcel.count({ where: { status: { not: "DELIVERED" } } }),
+      prisma.parcel.count({ where: { status: "AWAITING_PICKUP" } }),
+      prisma.dispute.count({ where: { status: "OPEN" } }),
+      prisma.dispute.count({ where: { status: "OPEN", priority: "HIGH" } }),
     ]);
 
     const totalRevenue = bookings.reduce((sum, b) => {
@@ -136,10 +270,15 @@ exports.getDashboardStats = async (req, res) => {
       success: true,
       data: {
         companiesCount,
+        pendingCompaniesCount,
         tripsCount,
         reservationsCount: bookings.length,
         totalRevenue,
         popularTrips,
+        parcelsInCirculation,
+        parcelsAwaitingPickup,
+        openDisputes,
+        highPriorityDisputes,
       },
     });
   } catch (error) {
@@ -149,7 +288,7 @@ exports.getDashboardStats = async (req, res) => {
 
 exports.getCompanyStats = async (req, res) => {
   try {
-    const companies = await prisma.company.findMany();
+    const companies = await prisma.company.findMany({ where: { status: "VERIFIED" } });
 
     const stats = await Promise.all(
       companies.map(async (company) => {
@@ -175,7 +314,7 @@ exports.getCompanyStats = async (req, res) => {
           stationsCount,
           reservationsCount: bookings.length,
           totalRevenue,
-          isBlocked: company.isBlocked,
+          status: company.status,
         };
       })
     );
@@ -188,7 +327,7 @@ exports.getCompanyStats = async (req, res) => {
 
 exports.getCompaniesRevenue = async (req, res) => {
   try {
-    const companies = await prisma.company.findMany();
+    const companies = await prisma.company.findMany({ where: { status: "VERIFIED" } });
 
     const revenues = await Promise.all(
       companies.map(async (company) => {
@@ -218,7 +357,7 @@ exports.getCompaniesRevenue = async (req, res) => {
 
 exports.getBookingsPerCompany = async (req, res) => {
   try {
-    const companies = await prisma.company.findMany();
+    const companies = await prisma.company.findMany({ where: { status: "VERIFIED" } });
 
     const data = await Promise.all(
       companies.map(async (company) => {
@@ -268,6 +407,58 @@ exports.getBookingsPerDay = async (req, res) => {
   }
 };
 
+exports.getActivityPerDay = async (req, res) => {
+  try {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const fourteenDaysAgo = new Date(today);
+    fourteenDaysAgo.setDate(today.getDate() - 13);
+
+    const [bookings, parcels] = await Promise.all([
+      prisma.booking.findMany({ where: { createdAt: { gte: fourteenDaysAgo } } }),
+      prisma.parcel.findMany({ where: { createdAt: { gte: fourteenDaysAgo } } }),
+    ]);
+
+    const days = [];
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(fourteenDaysAgo);
+      d.setDate(fourteenDaysAgo.getDate() + i);
+      const key = d.toISOString().split("T")[0];
+      days.push({
+        date: key,
+        reservations: 0,
+        colis: 0,
+      });
+    }
+    const byKey = Object.fromEntries(days.map((d) => [d.date, d]));
+    bookings.forEach((b) => {
+      const key = new Date(b.createdAt).toISOString().split("T")[0];
+      if (byKey[key]) byKey[key].reservations++;
+    });
+    parcels.forEach((p) => {
+      const key = new Date(p.createdAt).toISOString().split("T")[0];
+      if (byKey[key]) byKey[key].colis++;
+    });
+
+    res.status(200).json({ success: true, data: days });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getRecentDisputes = async (req, res) => {
+  try {
+    const disputes = await prisma.dispute.findMany({
+      orderBy: { createdAt: "desc" },
+      take: 5,
+      include: { company: { select: { companyName: true } } },
+    });
+    res.status(200).json({ success: true, data: disputes });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
 exports.getAllStations = async (req, res) => {
   try {
     const stations = await prisma.station.findMany({
@@ -300,7 +491,7 @@ exports.updateUserPermissions = async (req, res) => {
 
 exports.getCompaniesReservations = async (req, res) => {
   try {
-    const companies = await prisma.company.findMany();
+    const companies = await prisma.company.findMany({ where: { status: "VERIFIED" } });
     const data = await Promise.all(
       companies.map(async (company) => ({
         companyName: company.companyName,

@@ -86,7 +86,7 @@ exports.loginCompanyMember = async (req, res) => {
       where: { email },
       include: {
         companyMember: {
-          include: { company: { select: { id: true, companyName: true, isBlocked: true } } },
+          include: { company: { select: { id: true, companyName: true, status: true } } },
         },
       },
     });
@@ -98,10 +98,10 @@ exports.loginCompanyMember = async (req, res) => {
         .status(403)
         .json({ success: false, message: "Compte suspendu, contactez l'administrateur" });
     }
-    if (user.companyMember.company.isBlocked) {
+    if (user.companyMember.company.status === "SUSPENDED") {
       return res
         .status(403)
-        .json({ success: false, message: "Compagnie bloquée, contactez l'administrateur" });
+        .json({ success: false, message: "Compagnie suspendue, contactez l'administrateur" });
     }
     const ok = await bcrypt.compare(password, user.password);
     if (!ok) {

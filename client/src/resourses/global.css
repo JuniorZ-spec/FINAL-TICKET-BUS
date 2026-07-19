@@ -59,19 +59,21 @@ input:focus:hover {
   cursor: pointer;
 }
 
-.text-2xl {
+/* Renommé depuis .text-2xl/.text-xl/.text-lg/.text-md : ces noms entraient en collision
+   avec les classes Tailwind du même nom (écrasées via !important) dans 15 fichiers. */
+.fs-2xl {
   font-size: 30px !important;
 }
 
-.text-xl {
-  font-size: 25px !important ;
+.fs-xl {
+  font-size: 25px !important;
 }
 
-.text-lg {
+.fs-lg {
   font-size: 20px !important;
 }
 
-.text-md {
+.fs-md {
   font-size: 16px !important;
 }
 

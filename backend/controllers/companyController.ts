@@ -4,7 +4,7 @@ exports.getCompanyInfo = async (req, res) => {
   try {
     const company = await prisma.company.findUnique({
       where: { id: req.user.companyId },
-      select: { id: true, companyName: true, email: true, isBlocked: true, createdAt: true },
+      select: { id: true, companyName: true, email: true, status: true, createdAt: true },
     });
     if (!company) {
       return res.status(404).json({ success: false, message: "Compagnie introuvable" });
@@ -82,9 +82,51 @@ exports.getDashboardStats = async (req, res) => {
 exports.getAllCompanies = async (req, res) => {
   try {
     const companies = await prisma.company.findMany({
+      where: { status: "VERIFIED" },
       select: { id: true, companyName: true, email: true },
     });
     res.status(200).json({ success: true, data: companies });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.applyForPartnership = async (req, res) => {
+  try {
+    const { companyName, email, rccm, ifu, contactName, contactPhone, routesNote } = req.body;
+    if (!companyName || !email || !contactName || !contactPhone) {
+      return res.status(400).json({
+        success: false,
+        message: "Nom de la compagnie, email, contact et téléphone sont requis",
+      });
+    }
+
+    const existingCompany = await prisma.company.findFirst({
+      where: { OR: [{ email }, { companyName }] },
+    });
+    if (existingCompany) {
+      return res
+        .status(409)
+        .json({ success: false, message: "Une compagnie avec ce nom ou cet email existe déjà" });
+    }
+
+    await prisma.company.create({
+      data: {
+        companyName,
+        email,
+        status: "PENDING",
+        rccm: rccm ?? null,
+        ifu: ifu ?? null,
+        contactName,
+        contactPhone,
+        routesNote: routesNote ?? null,
+      },
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Votre demande de partenariat a été envoyée. Nous vous contacterons après examen.",
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
