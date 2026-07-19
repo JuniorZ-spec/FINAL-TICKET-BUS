@@ -28,7 +28,7 @@ exports.addTrip = async (req, res) => {
         date: new Date(date),
         departureTime,
         price: parseFloat(price),
-        companyId: req.user.userId,
+        companyId: req.user.companyId,
         busId,
         departureStationId,
         arrivalStationId,
@@ -44,7 +44,22 @@ exports.addTrip = async (req, res) => {
 exports.getAllTrips = async (req, res) => {
   try {
     const trips = await prisma.trip.findMany({ include: tripInclude });
-    res.status(200).json({ success: true, data: trips });
+
+    const bookings = await prisma.booking.findMany({
+      where: { tripId: { in: trips.map((t) => t.id) }, status: "ACTIVE" },
+      select: { tripId: true, seats: true },
+    });
+    const bookedCountByTrip = new Map();
+    for (const b of bookings) {
+      bookedCountByTrip.set(b.tripId, (bookedCountByTrip.get(b.tripId) || 0) + b.seats.length);
+    }
+
+    const data = trips.map((trip) => ({
+      ...trip,
+      availableSeats: trip.bus.capacity - (bookedCountByTrip.get(trip.id) || 0),
+    }));
+
+    res.status(200).json({ success: true, data });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

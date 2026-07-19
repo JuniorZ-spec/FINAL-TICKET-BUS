@@ -4,7 +4,7 @@ on:
   pull_request:
     branches: [main, develop]
   push:
-    branches: [main, develop]
+    branches: [main, develop, feature/**]
 
 jobs:
   # ── Job 1 : Lint & format du backend ──────────────────────────────────────
@@ -28,7 +28,7 @@ jobs:
         working-directory: backend
 
       - name: ESLint
-        run: npx eslint . --ext .js
+        run: npx eslint . --ext .ts
         working-directory: backend
 
       - name: Prettier — vérification du formatage
@@ -65,7 +65,35 @@ jobs:
         run: npx prettier --check src
         working-directory: client
 
-  # ── Job 3 : Audit de sécurité ──────────────────────────────────────────────
+  # ── Job 3 : Vérification TypeScript ──────────────────────────────────────
+  typecheck-backend:
+    name: Typecheck — Backend
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Récupérer le code
+        uses: actions/checkout@v4
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Installer les dépendances
+        run: npm ci
+        working-directory: backend
+
+      - name: Générer le client Prisma
+        run: npx prisma generate
+        working-directory: backend
+
+      - name: TypeScript — vérification des types
+        run: npx tsc --noEmit
+        working-directory: backend
+
+  # ── Job 4 : Audit de sécurité ──────────────────────────────────────────────
   security:
     name: Security audit
     runs-on: ubuntu-latest
@@ -82,12 +110,12 @@ jobs:
         run: npm audit --audit-level=critical
         working-directory: client
 
-  # ── Job 4 : Build des images Docker ───────────────────────────────────────
-  # Tourne seulement si lint-backend ET lint-client passent
+  # ── Job 5 : Build des images Docker ───────────────────────────────────────
+  # Tourne seulement si lint + typecheck passent
   build:
     name: Docker build
     runs-on: ubuntu-latest
-    needs: [lint-backend, lint-client]
+    needs: [lint-backend, lint-client, typecheck-backend]
 
     steps:
       - name: Récupérer le code

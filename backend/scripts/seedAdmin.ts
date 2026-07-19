@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs");
 const prisma = require("../prismaClient");
 
 async function seedAdmin() {
-  const existing = await prisma.user.findFirst({ where: { role: "ADMIN" } }); // Prisma enum uppercase
+  const existing = await prisma.user.findFirst({ where: { userType: "ADMIN" } });
   if (existing) {
     console.log("Un admin existe déjà :", existing.email);
     await prisma.$disconnect();
@@ -17,10 +17,11 @@ async function seedAdmin() {
 
   await prisma.user.create({
     data: {
-      name: "Super Admin",
       email: process.env.ADMIN_EMAIL,
       password: await bcrypt.hash(process.env.ADMIN_PASSWORD, 12),
-      role: "ADMIN",
+      userType: "ADMIN",
+      status: "ACTIVE",
+      adminProfile: { create: { name: "Super Admin" } },
     },
   });
 

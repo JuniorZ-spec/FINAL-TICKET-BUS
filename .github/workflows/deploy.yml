@@ -1,7 +1,9 @@
 name: CD
 
 on:
-  push:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
     branches: [main, develop]
 
 env:
@@ -13,10 +15,13 @@ jobs:
   deploy:
     name: Build & Deploy
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Récupérer le code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Configurer les credentials AWS
         uses: aws-actions/configure-aws-credentials@v4
@@ -37,9 +42,10 @@ jobs:
           context: ./backend
           push: true
           tags: |
-            ${{ env.ECR_BACKEND }}:${{ github.sha }}
+            ${{ env.ECR_BACKEND }}:${{ github.event.workflow_run.head_sha }}
             ${{ env.ECR_BACKEND }}:latest
-          no-cache: true
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Build & push — image frontend
         uses: docker/build-push-action@v5
@@ -47,7 +53,7 @@ jobs:
           context: ./client
           push: true
           tags: |
-            ${{ env.ECR_FRONTEND }}:${{ github.sha }}
+            ${{ env.ECR_FRONTEND }}:${{ github.event.workflow_run.head_sha }}
             ${{ env.ECR_FRONTEND }}:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max

@@ -13,12 +13,14 @@ function CompanyLogin() {
   const onFinish = async (values) => {
     try {
       dispatch(ShowLoading());
-      const response = await axios.post("/api/companys/login", values);
+      const response = await axios.post("/api/users/login-company", values);
       dispatch(HideLoading());
 
       if (response.data.success) {
         message.success(response.data.message);
-        localStorage.setItem("token", response.data.token);
+        const { accessToken, refreshToken } = response.data.data;
+        localStorage.setItem("token", accessToken);
+        localStorage.setItem("refreshToken", refreshToken);
         localStorage.setItem("role", "company"); // Facultatif mais utile
         navigate("/company"); // Redirection vers la page des compagnies
       } else {
