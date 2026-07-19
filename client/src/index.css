@@ -1,5 +1,17 @@
 @import "tailwindcss";
 
+@theme {
+  --color-terracotta: #d85a30;
+  --color-terracotta-dark: #b84020;
+  --color-brand-green: #0f6e56;
+  --color-brand-green-dark: #0b5443;
+  --color-saffron: #e8b03d;
+  --color-offwhite: #faf7f2;
+  --color-cream: #f5ead9;
+  --color-anthracite: #1a1a1a;
+  --font-sans: "Poppins", sans-serif;
+}
+
 :root {
   --primary: rgb(0, 0, 0);
   --secondary: rgb(0, 183, 255);
@@ -7,4 +19,12 @@
 
 body {
   @apply font-sans;
+}
+
+/* Les éléments de formulaire n'héritent pas de la police du body par défaut */
+button,
+input,
+select,
+textarea {
+  font-family: inherit;
 }
