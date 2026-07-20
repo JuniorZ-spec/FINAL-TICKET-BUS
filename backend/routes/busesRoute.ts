@@ -3,7 +3,7 @@ const authMiddleware = require("../middlewares/authMiddleware");
 const requireRole = require("../middlewares/requireRole");
 const busController = require("../controllers/busController");
 
-const companyAuth = [authMiddleware, requireRole("company")];
+const companyAuth = [authMiddleware, requireRole("COMPANY_MEMBER")];
 
 router.post("/get-buses-company", ...companyAuth, busController.getCompanyBuses);
 router.get("/get-all-buses", ...companyAuth, busController.getCompanyBuses);

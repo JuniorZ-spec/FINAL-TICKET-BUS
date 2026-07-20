@@ -10,6 +10,7 @@ import LigneForm from "../../components/LigneForm";
 
 const TABS = [
   { key: "departs", label: "Départs du jour" },
+  { key: "avenir", label: "À venir" },
   { key: "lignes", label: "Lignes tarifaires" },
 ];
 
@@ -114,6 +115,15 @@ function CompanyTrips() {
       .sort((a, b) => a.departureTime.localeCompare(b.departureTime));
   }, [trips]);
 
+  const upcomingTrips = useMemo(
+    () =>
+      [...trips.upcoming].sort(
+        (a, b) =>
+          new Date(a.date) - new Date(b.date) || a.departureTime.localeCompare(b.departureTime)
+      ),
+    [trips]
+  );
+
   return (
     <div className="max-w-7xl mx-auto">
       <div className="flex items-center justify-between mb-6">
@@ -123,7 +133,7 @@ function CompanyTrips() {
             Gestion des lignes, horaires et affectations
           </p>
         </div>
-        {tab === "departs" ? (
+        {tab !== "lignes" ? (
           <button
             onClick={() => {
               setSelectedTrip(null);
@@ -228,6 +238,95 @@ function CompanyTrips() {
                       </td>
                       <td className="px-5 py-3">
                         <StatusBadge status={trip.statusLabel} />
+                      </td>
+                      <td className="px-5 py-3">
+                        <button
+                          onClick={() => {
+                            setSelectedTrip(trip);
+                            setShowTripForm(true);
+                          }}
+                          className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-brand-green hover:bg-brand-green/10 transition-colors"
+                          title="Modifier"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      ) : tab === "avenir" ? (
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-gray-100 text-left text-xs text-anthracite/40 uppercase tracking-wider">
+                <th className="px-5 py-3 font-semibold">Date</th>
+                <th className="px-5 py-3 font-semibold">Heure</th>
+                <th className="px-5 py-3 font-semibold">Ligne</th>
+                <th className="px-5 py-3 font-semibold">Bus</th>
+                <th className="px-5 py-3 font-semibold">Vendus</th>
+                <th className="px-5 py-3 font-semibold">Remplissage</th>
+                <th className="px-5 py-3 font-semibold">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {upcomingTrips.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="px-5 py-12 text-center text-anthracite/40">
+                    Aucun trajet à venir.
+                  </td>
+                </tr>
+              ) : (
+                upcomingTrips.map((trip) => {
+                  const pct = trip.bus?.capacity
+                    ? Math.round((trip.bookedSeats / trip.bus.capacity) * 100)
+                    : 0;
+                  const barColor = pct > 88 ? "#EF4444" : pct > 65 ? "#D85A30" : "#0F6E56";
+                  return (
+                    <tr key={trip.id} className="border-b border-gray-50 last:border-0">
+                      <td className="px-5 py-3 text-anthracite/70 whitespace-nowrap">
+                        {new Date(trip.date).toLocaleDateString("fr-FR", {
+                          day: "2-digit",
+                          month: "2-digit",
+                        })}
+                      </td>
+                      <td className="px-5 py-3 font-mono font-semibold text-anthracite">
+                        {trip.departureTime}
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className="font-semibold text-anthracite">{trip.from}</span>
+                        <span className="text-anthracite/30 mx-1">→</span>
+                        <span className="font-semibold text-anthracite">{trip.to}</span>
+                        {trip.ligne?.code && (
+                          <span className="ml-2 text-[11px] text-anthracite/40 font-mono">
+                            {trip.ligne.code}
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3 text-anthracite/70">
+                        <span className="inline-flex items-center gap-1.5">
+                          <Bus size={14} className="text-anthracite/30" />
+                          {trip.bus?.name || "—"}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 font-mono text-anthracite">
+                        {trip.bookedSeats}/{trip.bus?.capacity ?? "—"}
+                      </td>
+                      <td className="px-5 py-3 w-40">
+                        <div className="flex items-center gap-2">
+                          <div className="flex-1 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full rounded-full"
+                              style={{ width: `${pct}%`, backgroundColor: barColor }}
+                            />
+                          </div>
+                          <span className="text-xs text-anthracite/50 font-mono w-9 text-right">
+                            {pct}%
+                          </span>
+                        </div>
                       </td>
                       <td className="px-5 py-3">
                         <button

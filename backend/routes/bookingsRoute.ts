@@ -10,13 +10,13 @@ router.post("/get-bookings", authMiddleware, bookingController.getUserBookings);
 router.get(
   "/get-company-bookings",
   authMiddleware,
-  requireRole("company"),
+  requireRole("COMPANY_MEMBER"),
   bookingController.getCompanyBookings
 );
 router.get(
   "/get-all-bookings",
   authMiddleware,
-  requireRole("admin"),
+  requireRole("ADMIN"),
   bookingController.getAllBookings
 );
 
