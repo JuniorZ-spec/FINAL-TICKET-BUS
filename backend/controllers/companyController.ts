@@ -17,13 +17,29 @@ exports.getCompanyInfo = async (req, res) => {
 
 exports.getCompanyTrips = async (req, res) => {
   try {
+    const companyId = req.user.companyId;
     const trips = await prisma.trip.findMany({
-      where: { companyId: req.user.companyId },
+      where: { companyId },
       include: {
         bus: true,
         departureStation: true,
         arrivalStation: true,
+        ligne: { select: { code: true, duration: true } },
       },
+    });
+
+    const bookings = await prisma.booking.findMany({
+      where: { companyId, tripId: { in: trips.map((t) => t.id) }, status: "ACTIVE" },
+      select: { tripId: true, seats: true },
+    });
+    const bookedByTrip = new Map();
+    bookings.forEach((b) => {
+      bookedByTrip.set(b.tripId, (bookedByTrip.get(b.tripId) || 0) + b.seats.length);
+    });
+
+    const tripsWithFill = trips.map((trip) => {
+      const bookedSeats = bookedByTrip.get(trip.id) || 0;
+      return { ...trip, bookedSeats, availableSeats: trip.bus.capacity - bookedSeats };
     });
 
     const now = new Date();
@@ -31,7 +47,7 @@ exports.getCompanyTrips = async (req, res) => {
       ongoing = [],
       past = [];
 
-    for (const trip of trips) {
+    for (const trip of tripsWithFill) {
       const tripDate = new Date(trip.date);
       const [h, m] = trip.departureTime.split(":").map(Number);
       tripDate.setHours(h, m, 0, 0);
@@ -54,7 +70,7 @@ exports.getDashboardStats = async (req, res) => {
 
     const [bookings, trips, busesCount, stationsCount] = await Promise.all([
       prisma.booking.findMany({ where: { companyId } }),
-      prisma.trip.findMany({ where: { companyId }, select: { id: true, price: true } }),
+      prisma.trip.findMany({ where: { companyId }, select: { id: true, price: true, busId: true } }),
       prisma.bus.count({ where: { companyId } }),
       prisma.station.count({ where: { companyId } }),
     ]);
@@ -64,6 +80,34 @@ exports.getDashboardStats = async (req, res) => {
       return sum + (trip ? trip.price * b.seats.length : 0);
     }, 0);
 
+    const todayKey = new Date().toISOString().split("T")[0];
+    const todayBookings = bookings.filter(
+      (b) => new Date(b.createdAt).toISOString().split("T")[0] === todayKey
+    );
+    const ticketsToday = todayBookings.reduce((sum, b) => sum + b.seats.length, 0);
+    const revenueToday = todayBookings.reduce((sum, b) => {
+      const trip = trips.find((t) => t.id === b.tripId);
+      return sum + (trip ? trip.price * b.seats.length : 0);
+    }, 0);
+
+    let avgFillRate = 0;
+    if (trips.length > 0) {
+      const buses = await prisma.bus.findMany({
+        where: { id: { in: [...new Set(trips.map((t) => t.busId))] } },
+        select: { id: true, capacity: true },
+      });
+      const capacityByBus = new Map<string, number>(buses.map((b) => [b.id, b.capacity]));
+      const bookedByTrip = new Map<string, number>();
+      bookings.forEach((b) => {
+        bookedByTrip.set(b.tripId, (bookedByTrip.get(b.tripId) || 0) + b.seats.length);
+      });
+      const rates = trips.map((t) => {
+        const cap = capacityByBus.get(t.busId) || 0;
+        return cap > 0 ? Math.min((bookedByTrip.get(t.id) || 0) / cap, 1) : 0;
+      });
+      avgFillRate = Math.round((rates.reduce((s, r) => s + r, 0) / rates.length) * 100);
+    }
+
     res.status(200).json({
       success: true,
       data: {
@@ -72,6 +116,9 @@ exports.getDashboardStats = async (req, res) => {
         tripsCount: trips.length,
         reservationsCount: bookings.length,
         totalRevenue,
+        ticketsToday,
+        revenueToday,
+        avgFillRate,
       },
     });
   } catch (error) {
@@ -136,6 +183,92 @@ exports.getCompanyStations = async (req, res) => {
   try {
     const stations = await prisma.station.findMany({ where: { companyId: req.user.companyId } });
     res.status(200).json({ success: true, data: stations });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getLignes = async (req, res) => {
+  try {
+    const lignes = await prisma.ligne.findMany({
+      where: { companyId: req.user.companyId },
+      orderBy: { createdAt: "asc" },
+    });
+    res.status(200).json({ success: true, data: lignes });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.createLigne = async (req, res) => {
+  try {
+    const { from, to, code, duration, standardPrice, vipPrice } = req.body;
+    if (!from || !to || !code || !standardPrice) {
+      return res.status(400).json({
+        success: false,
+        message: "Ville de départ, d'arrivée, code et tarif standard sont requis",
+      });
+    }
+
+    const existing = await prisma.ligne.findFirst({
+      where: { companyId: req.user.companyId, code },
+    });
+    if (existing) {
+      return res.status(409).json({ success: false, message: "Ce code de ligne existe déjà" });
+    }
+
+    const ligne = await prisma.ligne.create({
+      data: {
+        companyId: req.user.companyId,
+        from,
+        to,
+        code,
+        duration: duration ?? null,
+        standardPrice: Number(standardPrice),
+        vipPrice: vipPrice ? Number(vipPrice) : null,
+      },
+    });
+    res.status(201).json({ success: true, message: "Ligne créée avec succès", data: ligne });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.updateLigne = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const ligne = await prisma.ligne.findUnique({ where: { id } });
+    if (!ligne || ligne.companyId !== req.user.companyId) {
+      return res.status(404).json({ success: false, message: "Ligne introuvable" });
+    }
+
+    const { from, to, code, duration, standardPrice, vipPrice } = req.body;
+    const updated = await prisma.ligne.update({
+      where: { id },
+      data: {
+        from,
+        to,
+        code,
+        duration: duration ?? null,
+        standardPrice: Number(standardPrice),
+        vipPrice: vipPrice ? Number(vipPrice) : null,
+      },
+    });
+    res.status(200).json({ success: true, message: "Ligne mise à jour", data: updated });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.deleteLigne = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const ligne = await prisma.ligne.findUnique({ where: { id } });
+    if (!ligne || ligne.companyId !== req.user.companyId) {
+      return res.status(404).json({ success: false, message: "Ligne introuvable" });
+    }
+    await prisma.ligne.delete({ where: { id } });
+    res.status(200).json({ success: true, message: "Ligne supprimée" });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

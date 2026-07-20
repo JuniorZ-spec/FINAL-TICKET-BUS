@@ -1,14 +1,16 @@
-import React from "react";
+import { useState } from "react";
 import { Form, message } from "antd";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import { useDispatch } from "react-redux";
 import { ShowLoading, HideLoading } from "../../redux/alertsSlice";
-import { ArrowLeft, Building2, Mail, Lock } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Bus } from "lucide-react";
+import CompanyBranding from "../../components/CompanyBranding";
 
 function CompanyLogin() {
   const navigate = useNavigate();
   const dispatch = useDispatch();
+  const [showPassword, setShowPassword] = useState(false);
 
   const onFinish = async (values) => {
     try {
@@ -21,8 +23,8 @@ function CompanyLogin() {
         const { accessToken, refreshToken } = response.data.data;
         localStorage.setItem("token", accessToken);
         localStorage.setItem("refreshToken", refreshToken);
-        localStorage.setItem("role", "company"); // Facultatif mais utile
-        navigate("/company"); // Redirection vers la page des compagnies
+        localStorage.setItem("role", "company");
+        navigate("/company");
       } else {
         message.error(response.data.message);
       }
@@ -33,93 +35,106 @@ function CompanyLogin() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-emerald-50 to-green-100 py-12 px-4 sm:px-6 lg:px-8">
-      <button
-        onClick={() => navigate(-1)} // Redirection vers la page précédente
-        className="absolute top-8 left-8 flex items-center text-gray-600 hover:text-gray-900"
-      >
-        <ArrowLeft className="h-5 w-5 mr-2" />
-        Retour
-      </button>
+    <div className="min-h-screen flex bg-offwhite">
+      <CompanyBranding />
 
-      <div className="max-w-md w-full mx-auto">
-        <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-emerald-100 rounded-full flex items-center justify-center">
-            <Building2 className="h-8 w-8 text-emerald-600" />
+      <div className="flex-1 flex items-center justify-center px-6 py-12 lg:px-12">
+        <div className="w-full max-w-md">
+          {/* Logo mobile */}
+          <div className="flex items-center gap-2.5 mb-8 lg:hidden">
+            <div
+              className="w-9 h-9 rounded-xl flex items-center justify-center"
+              style={{ background: "linear-gradient(135deg, #D85A30 60%, #B84020 100%)" }}
+            >
+              <Bus className="h-4 w-4 text-white" />
+            </div>
+            <span className="font-black text-lg text-anthracite">
+              AliGo<span className="text-terracotta">.bj</span>
+            </span>
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">Espace Compagnie</h2>
-          <p className="mt-2 text-sm text-gray-600">Connectez-vous pour gérer vos services</p>
-        </div>
 
-        <Form layout="vertical" onFinish={onFinish} className="mt-8 space-y-6">
-          <div className="rounded-md shadow-sm space-y-4">
-            <div className="relative">
-              <label htmlFor="email" className="sr-only">
-                Email professionnel
+          <div className="mb-8">
+            <h1 className="text-2xl font-extrabold text-anthracite mb-1">Connexion</h1>
+            <p className="text-sm text-anthracite/50">Accédez à votre espace de gestion.</p>
+          </div>
+
+          <Form layout="vertical" onFinish={onFinish} className="space-y-5">
+            <div>
+              <label className="block text-sm font-semibold text-anthracite/70 mb-1.5">
+                Adresse email
               </label>
-              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <Form.Item
-                name="email"
-                rules={[{ required: true, message: "Veuillez entrer votre email!" }]}
-              >
-                <input
-                  type="email"
-                  id="email"
-                  required
-                  className="appearance-none rounded-lg relative block w-full pl-12 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                  placeholder="Email professionnel"
-                />
-              </Form.Item>
+              <div className="relative">
+                <Mail className="absolute z-10 left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-anthracite/30" />
+                <Form.Item
+                  name="email"
+                  rules={[{ required: true, message: "Veuillez entrer votre email" }]}
+                  className="!mb-0"
+                >
+                  <input
+                    type="email"
+                    autoComplete="email"
+                    placeholder="gerant@macompagnie.bj"
+                    className="w-full pl-12 pr-3 py-3 border border-gray-200 rounded-xl placeholder-anthracite/30 text-anthracite focus:outline-none focus:ring-2 focus:ring-terracotta/30 focus:border-terracotta text-base"
+                  />
+                </Form.Item>
+              </div>
             </div>
 
-            <div className="relative">
-              <label htmlFor="password" className="sr-only">
+            <div>
+              <label className="block text-sm font-semibold text-anthracite/70 mb-1.5">
                 Mot de passe
               </label>
-              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              <Form.Item
-                name="password"
-                rules={[{ required: true, message: "Veuillez entrer votre mot de passe!" }]}
-              >
-                <input
-                  type="password"
-                  id="password"
-                  required
-                  className="appearance-none rounded-lg relative block w-full pl-12 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm"
-                  placeholder="Mot de passe"
-                />
-              </Form.Item>
+              <div className="relative">
+                <Lock className="absolute z-10 left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-anthracite/30" />
+                <Form.Item
+                  name="password"
+                  rules={[{ required: true, message: "Veuillez entrer votre mot de passe" }]}
+                  className="!mb-0"
+                >
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    autoComplete="current-password"
+                    placeholder="••••••••"
+                    className="w-full pl-12 pr-11 py-3 border border-gray-200 rounded-xl placeholder-anthracite/30 text-anthracite focus:outline-none focus:ring-2 focus:ring-terracotta/30 focus:border-terracotta text-base"
+                  />
+                </Form.Item>
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute z-10 right-4 top-1/2 -translate-y-1/2 text-anthracite/30 hover:text-anthracite/60 transition-colors"
+                  aria-label={showPassword ? "Masquer le mot de passe" : "Afficher le mot de passe"}
+                >
+                  {showPassword ? <EyeOff size={17} /> : <Eye size={17} />}
+                </button>
+              </div>
             </div>
-          </div>
 
-          <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <input
-                id="remember-me"
-                name="remember-me"
-                type="checkbox"
-                className="h-4 w-4 text-emerald-600 focus:ring-emerald-500 border-gray-300 rounded"
-              />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
-                Se souvenir de moi
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 text-sm text-anthracite/60 cursor-pointer">
+                <input type="checkbox" className="w-4 h-4 rounded accent-terracotta" />
+                Rester connecté
               </label>
+              <Link
+                to="/forgot-password"
+                className="text-sm font-medium text-terracotta hover:text-terracotta-dark"
+              >
+                Mot de passe oublié ?
+              </Link>
             </div>
-            <div className="text-sm">
-              <a href="#" className="font-medium text-emerald-600 hover:text-emerald-500">
-                Mot de passe oublié?
-              </a>
-            </div>
-          </div>
 
-          <div>
             <button
               type="submit"
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-emerald-600 hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-emerald-500"
+              className="w-full py-3.5 rounded-2xl text-white text-base font-bold bg-terracotta hover:bg-terracotta-dark transition-colors flex items-center justify-center gap-2"
             >
               Se connecter
+              <ArrowRight size={17} />
             </button>
-          </div>
-        </Form>
+
+            <p className="text-center text-sm text-anthracite/50">
+              Pas encore partenaire ? Contactez l&apos;équipe AliGo.
+            </p>
+          </Form>
+        </div>
       </div>
     </div>
   );
