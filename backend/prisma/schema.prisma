@@ -184,6 +184,7 @@ model Company {
   reviews     Review[]
   parcels     Parcel[]
   disputes    Dispute[]
+  lignes      Ligne[]
 }
 
 model Bus {
@@ -234,6 +235,8 @@ model Trip {
   departureStationId String
   arrivalStation     Station  @relation("ArrivalStation", fields: [arrivalStationId], references: [id])
   arrivalStationId   String
+  ligne              Ligne?   @relation(fields: [ligneId], references: [id])
+  ligneId            String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -242,6 +245,26 @@ model Trip {
   @@index([companyId])
   @@index([busId])
   @@index([date])
+  @@index([ligneId])
+}
+
+model Ligne {
+  id            String   @id @default(cuid())
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId     String
+  from          String
+  to            String
+  code          String
+  duration      String?
+  standardPrice Float
+  vipPrice      Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  trips Trip[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
 }
 
 model Booking {
