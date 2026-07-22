@@ -207,3 +207,7 @@ Ce projet utilise des conventions Git classiques :
 Avant chaque commit, le dépôt exécute Husky + lint-staged pour formatter le code avec Prettier et corriger les erreurs ESLint.
 
 Pour plus de détails sur la contribution, consulter `CONTRIBUTING.md`.
+
+## Notes
+
+- Vérification de connectivité Git (push de test) effectuée le 2026-07-22.
