@@ -67,7 +67,7 @@ async function processMessage(message: BookingMessage): Promise<void> {
     });
 
     console.log(`Reservation confirmee : ${booking.id} (demande ${bookingRequestId})`);
-  } catch (error) {
+  } catch (error: any) {
     const isUniqueConstraintViolation =
       error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
 
