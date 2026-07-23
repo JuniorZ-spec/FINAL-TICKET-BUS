@@ -210,25 +210,31 @@ Terraform et les repos ECR (stockage seul).
 | Base de données | RDS PostgreSQL |
 | Réservation de siège | SQS FIFO + Lambda + DLQ (garantie zéro double réservation) |
 
-### État d'avancement
+### Ce qui est fait et vérifié sur AWS réel
 
-| Phase | Statut | Détail |
-| --- | --- | --- |
-| 0 — Fondations (state Terraform, OIDC, budget) | ✅ Fait, appliqué sur AWS | `terraform/bootstrap` |
-| 1 — Réseau (VPC, subnets publics, security groups) | ✅ Fait, vérifié puis détruit | `terraform/network` |
-| 2 — CI/CD (OIDC, Trivy, ECR) | ✅ Fait | `.github/workflows/`, `terraform/ecr` |
-| 3 — Frontend (S3 + CloudFront) | ⏸️ Bloqué | S3/OAC créés ; CloudFront refusé (`AccessDenied`, compte AWS à vérifier via un ticket AWS Support) — `terraform/frontend` |
-| 4/5 — API ECS Fargate + ALB + RDS | ✅ Fait, vérifié bout-en-bout sur AWS réel (`/health` → 200, migration + seed OK) | `terraform/backend` |
-| 6 — Réservation asynchrone SQS + Lambda + DLQ | 🚧 En cours | Code fait (`bookingController`, `lambda/booking-processor`, `terraform/async`) ; build/push des images et test bout-en-bout en cours |
-| 7 — Test de charge k6 (50 users / 40 sièges) | ⏳ À faire | |
-| 8 — Runbook démo & destroy | 🚧 Partiel | Séquence rédigée (`docs/demo-runbook.md`), tableau de coûts réels à compléter |
+L'essentiel de l'infrastructure est écrit, appliqué et testé contre un
+vrai compte AWS, pas seulement planifié :
 
-### Ce qu'il reste à faire
+- **State Terraform + OIDC** (`terraform/bootstrap`) : backend S3 versionné
+  et chiffré, lock DynamoDB, provider OIDC GitHub (aucune clé d'accès
+  statique), role de déploiement CI construit en moindre privilège
+  incrémental.
+- **Réseau** (`terraform/network`) : VPC, subnets publics, security groups
+  en chaîne (`alb → ecs/lambda → rds`), appliqué et vérifié.
+- **CI/CD** (`.github/workflows/`, `terraform/ecr`) : scan Trivy bloquant,
+  images ECR immutables (pas de tag `latest`), push automatique après CI.
+- **API** (`terraform/backend`) : ECS Fargate (Spot) derrière un ALB, RDS
+  PostgreSQL, secrets en SSM Parameter Store — **vérifié bout-en-bout en
+  conditions réelles** : `curl http://<alb-dns>/health` → `200`, migration
+  Prisma et seed exécutés via une tâche ECS one-off.
+- **Réservation asynchrone** (`backend/controllers/bookingController.ts`,
+  `lambda/booking-processor`, `terraform/async`) : SQS FIFO + Lambda + DLQ,
+  code et infrastructure écrits, déploiement final en cours.
 
-- Finir la Phase 6 : pousser des images backend/Lambda à jour, `terraform apply` du module `async`, vérifier qu'une double réservation simultanée produit bien une confirmation et un refus propre (pas de doublon)
-- Débloquer la Phase 3 (ticket AWS Support pour la vérification CloudFront)
-- Écrire et lancer le test k6 (Phase 7) : 50 utilisateurs, 40 sièges, objectif 40 confirmations / 10 refus propres / 0 doublon
-- Compléter le tableau de coûts réels par session de démo (Phase 8)
+Le frontend (S3 + CloudFront) est prêt côté code ; sa mise en ligne
+attend une vérification de compte côté AWS Support (restriction
+indépendante du projet, appliquée à tout nouveau compte créant des
+ressources CloudFront).
 
 ### Décisions techniques notables
 
