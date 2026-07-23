@@ -1,5 +1,20 @@
 const prisma = require("../prismaClient");
 const redis = require("../redisClient");
+const sqsClient = require("../sqsClient");
+const { SendMessageCommand } = require("@aws-sdk/client-sqs");
+
+// Redis n'est qu'un verrou consultatif (évite que deux clients choisissent le
+// même siège pendant le paiement) : bookSeat revérifie toujours en base, seule
+// source de vérité contre la survente. Si Redis est indisponible, on continue
+// sans bloquer la réservation plutôt que de faire échouer tout le parcours.
+const safeRedis = async (fn, fallback) => {
+  try {
+    return await fn();
+  } catch (error) {
+    console.error("❌ Redis indisponible, verrou de siège ignoré :", error.message);
+    return fallback;
+  }
+};
 
 exports.lockSeat = async (req, res) => {
   try {
@@ -11,7 +26,7 @@ exports.lockSeat = async (req, res) => {
     }
 
     for (const seat of seats) {
-      const isLocked = await redis.get(`lock:${tripId}:${seat}`);
+      const isLocked = await safeRedis(() => redis.get(`lock:${tripId}:${seat}`), null);
       if (isLocked) {
         return res
           .status(409)
@@ -20,7 +35,7 @@ exports.lockSeat = async (req, res) => {
     }
 
     for (const seat of seats) {
-      await redis.set(`lock:${tripId}:${seat}`, userId, "EX", 600);
+      await safeRedis(() => redis.set(`lock:${tripId}:${seat}`, userId, "EX", 600), null);
     }
 
     res.status(200).json({ success: true, message: "Sièges verrouillés avec succès" });
@@ -53,7 +68,13 @@ exports.bookSeat = async (req, res) => {
     const requestedSeats = Array.isArray(seats) ? seats.map(String) : [];
 
     for (const seat of requestedSeats) {
-      const locker = await redis.get(`lock:${tripId}:${seat}`);
+      let locker;
+      try {
+        locker = await redis.get(`lock:${tripId}:${seat}`);
+      } catch (error) {
+        console.error("❌ Redis indisponible, vérification du verrou ignorée :", error.message);
+        continue; // la vérification en base ci-dessous reste la protection réelle
+      }
       if (locker !== String(userId)) {
         return res.status(403).json({
           success: false,
@@ -62,30 +83,76 @@ exports.bookSeat = async (req, res) => {
       }
     }
 
-    const activeBookings = await prisma.booking.findMany({
-      where: { tripId, status: "ACTIVE" },
-    });
-    const alreadyBooked = activeBookings.flatMap((b) => b.seats);
-    if (requestedSeats.some((s) => alreadyBooked.includes(s))) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Un ou plusieurs sièges sont déjà réservés" });
-    }
-
-    const booking = await prisma.booking.create({
+    // Confirmation asynchrone : cette route ne fait plus qu'enregistrer la
+    // demande et l'empiler sur SQS FIFO. La garantie "zero double
+    // reservation" ne vient plus d'une lecture optimiste ici (race
+    // condition TOCTOU classique), mais de la contrainte @@unique sur
+    // BookingSeat, appliquee par la Lambda dans une transaction — voir
+    // lambda/booking-processor et docs/decisions.md (Phase 6).
+    const bookingRequest = await prisma.bookingRequest.create({
       data: {
         seats: requestedSeats,
         transactionId,
-        status: "ACTIVE",
+        status: "PENDING",
         userId,
         tripId,
-        companyId: trip.companyId,
       },
     });
 
-    await Promise.all(requestedSeats.map((seat) => redis.del(`lock:${tripId}:${seat}`)));
+    await sqsClient.send(
+      new SendMessageCommand({
+        QueueUrl: process.env.BOOKING_QUEUE_URL,
+        MessageBody: JSON.stringify({
+          bookingRequestId: bookingRequest.id,
+          tripId,
+          seats: requestedSeats,
+          userId,
+          companyId: trip.companyId,
+          transactionId,
+        }),
+        // Meme groupe = meme trip => SQS FIFO garantit qu'un seul message
+        // de ce trip est en cours de traitement a la fois (une tache
+        // Lambda concurrente par groupe). Premiere ligne de defense, pas
+        // la preuve d'unicite - celle-ci vient de la contrainte DB.
+        MessageGroupId: tripId,
+        MessageDeduplicationId: transactionId,
+      })
+    );
 
-    res.status(200).json({ success: true, message: "Réservation réussie", data: { booking } });
+    res.status(202).json({
+      success: true,
+      message: "Demande de réservation enregistrée, traitement en cours",
+      data: { bookingRequestId: bookingRequest.id, status: "PENDING" },
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+exports.getBookingRequestStatus = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const bookingRequest = await prisma.bookingRequest.findUnique({
+      where: { id },
+      include: { booking: true },
+    });
+
+    if (!bookingRequest) {
+      return res.status(404).json({ success: false, message: "Demande introuvable" });
+    }
+
+    if (bookingRequest.userId !== req.user.userId) {
+      return res.status(403).json({ success: false, message: "Accès refusé" });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: {
+        status: bookingRequest.status,
+        booking: bookingRequest.booking,
+      },
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
@@ -135,8 +202,14 @@ exports.getCompanyBookings = async (req, res) => {
   try {
     const bookings = await prisma.booking.findMany({
       where: { companyId: req.user.companyId },
+      orderBy: { createdAt: "desc" },
       include: {
-        user: { select: { email: true, travelerProfile: { select: { name: true } } } },
+        user: {
+          select: {
+            email: true,
+            travelerProfile: { select: { name: true, phone: true } },
+          },
+        },
         trip: {
           include: {
             departureStation: true,

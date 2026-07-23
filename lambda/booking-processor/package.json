@@ -1,0 +1,18 @@
+{
+  "name": "ticketbus-lambda-booking",
+  "version": "1.0.0",
+  "private": true,
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.22.0"
+  },
+  "devDependencies": {
+    "prisma": "^5.22.0",
+    "typescript": "^5.6.0",
+    "@types/aws-lambda": "^8.10.145",
+    "@types/node": "^20.14.0"
+  }
+}
