@@ -257,3 +257,50 @@ cet apply (pas gratuits, contrairement à tout ce qui précède) — à détruir
 dès la fin des vérifications, ou à garder brièvement si on enchaîne
 directement sur la Phase 6 pour éviter de re-provisionner RDS (6-7 min)
 deux fois de suite.
+
+---
+
+## Phase 6 — Vérification bout-en-bout (2026-07-23)
+
+**Bugs rencontrés et corrigés en déployant réellement :**
+
+1. **Manifeste Docker incompatible avec Lambda** : `docker build` récent
+   génère par défaut un manifeste OCI avec attestations de
+   provenance/SBOM, que `lambda:CreateFunction` rejette
+   (`InvalidParameterValueException: image manifest ... is not
+   supported`). Fix : `docker build --provenance=false --sbom=false`.
+2. **`prisma/schema.prisma` et les migrations absents de l'image runtime
+   du backend** — le Dockerfile ne copiait que `dist/` et
+   `node_modules/.prisma`, pas le dossier `prisma/` lui-même, donc `prisma
+   migrate deploy` échouait (`Could not find Prisma Schema`). Fix : ajout
+   de `COPY --from=builder /app/prisma ./prisma` dans le stage runner
+   (`backend/Dockerfile`).
+3. `lambda/booking-processor` n'avait pas de `package-lock.json` committé
+   (jamais installé avant de builder l'image) — `npm ci` l'exige.
+4. Repo ECR immutable + bug découvert après un premier push : il a fallu
+   re-tagger (`sha-<commit>-2`, `-3`) plutôt que d'écraser le tag existant
+   — comportement voulu de l'immutabilité, pas un bug en soi.
+
+**Une fois ces bugs corrigés** : migration complète appliquée (6
+migrations en attente depuis plusieurs semaines de dev local, dont la
+refonte auth LOT 8, toutes appliquées d'un coup sur la RDS de démo) et
+données de démo seedées (`backend/scripts/seedDemoData.ts` : 1 compagnie,
+1 bus 40 places, 1 trajet, 1 voyageur de test).
+
+**Test réel du cœur du projet** : deux requêtes `book-seat` envoyées en
+parallèle sur le même siège (transactionId différents, même trip, même
+siège `"5"`) :
+
+```
+race-tx-A -> REJECTED
+race-tx-B -> CONFIRMED (booking cmry4h8zn0003w9yajvt53rvc)
+```
+
+Exactement le résultat attendu : une confirmation, un refus propre, aucun
+doublon — sur une vraie race condition, en conditions réelles (ALB → ECS
+Fargate → SQS FIFO → Lambda VPC-attachée → RDS). C'est la preuve concrète
+que la contrainte `BookingSeat.@@unique([tripId, seat])` fait le travail,
+indépendamment de l'ordre d'arrivée des messages SQS.
+
+Phase 6 terminée et vérifiée. Prochaine étape : Phase 7 (test de charge
+k6, 50 utilisateurs / 40 sièges).
