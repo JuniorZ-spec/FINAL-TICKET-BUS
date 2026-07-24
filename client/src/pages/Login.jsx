@@ -5,6 +5,7 @@ import { useNavigate, Link } from "react-router-dom";
 import axios from "axios";
 import { useDispatch } from "react-redux";
 import { ShowLoading, HideLoading } from "../redux/alertsSlice";
+import WaxPattern from "../components/WaxPattern";
 
 function Login() {
   const navigate = useNavigate();
@@ -18,15 +19,10 @@ function Login() {
 
       if (response.data.success) {
         message.success(response.data.message);
-        const token = response.data.data;
-        localStorage.setItem("token", token);
-
-        const decodedToken = JSON.parse(atob(token.split(".")[1]));
-        if (decodedToken.role === "admin") {
-          window.location.href = "/admin";
-        } else {
-          window.location.href = "/";
-        }
+        const { accessToken, refreshToken } = response.data.data;
+        localStorage.setItem("token", accessToken);
+        localStorage.setItem("refreshToken", refreshToken);
+        window.location.href = "/";
       } else {
         message.error(response.data.message);
       }
@@ -41,95 +37,96 @@ function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 py-12 px-4 sm:px-6 lg:px-8">
+    <div className="relative min-h-screen bg-offwhite py-12 px-4 sm:px-6 lg:px-8">
+      <WaxPattern />
       <button
         onClick={() => navigate(-1)}
-        className="absolute top-8 left-8 flex items-center text-gray-600 hover:text-gray-900"
+        className="absolute z-10 top-8 left-8 flex items-center text-anthracite/60 hover:text-anthracite font-medium"
       >
         <ArrowLeft className="h-5 w-5 mr-2" />
         Retour
       </button>
 
-      <div className="max-w-md w-full mx-auto">
-        <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-indigo-100 rounded-full flex items-center justify-center">
-            <Users className="h-8 w-8 text-indigo-600" />
+      <div className="relative z-10 max-w-md w-full mx-auto bg-white rounded-2xl border border-gray-200 shadow-sm p-8 mt-16">
+        <div className="text-center mb-8">
+          <div className="mx-auto h-20 w-20 bg-terracotta/10 rounded-full flex items-center justify-center">
+            <Users className="h-9 w-9 text-terracotta" />
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">Espace Voyageur</h2>
-          <p className="mt-2 text-sm text-gray-600">Connectez-vous pour réserver vos billets</p>
+          <h2 className="mt-6 text-3xl font-extrabold text-anthracite">Espace Voyageur</h2>
+          <p className="mt-2 text-lg text-anthracite/60">
+            Connectez-vous pour réserver vos billets
+          </p>
         </div>
 
-        <Form onFinish={onFinish} layout="vertical" className="mt-8 space-y-6">
+        <Form onFinish={onFinish} layout="vertical" className="space-y-5">
           <div className="space-y-4">
-            <Form.Item
-              name="email"
-              rules={[{ required: true, message: "Veuillez entrer votre email" }]}
-            >
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <div className="relative">
+              <Mail className="absolute z-10 left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-anthracite/30" />
+              <Form.Item
+                name="email"
+                rules={[{ required: true, message: "Veuillez entrer votre email" }]}
+                className="!mb-0"
+              >
                 <input
                   type="email"
-                  name="email"
                   autoComplete="on"
                   placeholder="Adresse email"
-                  className="appearance-none rounded-lg relative block w-full pl-12 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="w-full pl-12 pr-3 py-3 border border-gray-200 rounded-xl placeholder-anthracite/30 text-anthracite focus:outline-none focus:ring-2 focus:ring-terracotta/30 focus:border-terracotta text-base"
                 />
-              </div>
-            </Form.Item>
+              </Form.Item>
+            </div>
 
-            <Form.Item
-              name="password"
-              rules={[{ required: true, message: "Veuillez entrer votre mot de passe" }]}
-            >
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <div className="relative">
+              <Lock className="absolute z-10 left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-anthracite/30" />
+              <Form.Item
+                name="password"
+                rules={[{ required: true, message: "Veuillez entrer votre mot de passe" }]}
+                className="!mb-0"
+              >
                 <input
                   type="password"
-                  name="password"
                   placeholder="Mot de passe"
-                  className="appearance-none rounded-lg relative block w-full pl-12 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="w-full pl-12 pr-3 py-3 border border-gray-200 rounded-xl placeholder-anthracite/30 text-anthracite focus:outline-none focus:ring-2 focus:ring-terracotta/30 focus:border-terracotta text-base"
                 />
-              </div>
-            </Form.Item>
+              </Form.Item>
+            </div>
           </div>
 
           <div className="flex items-center justify-between w-full">
-            <div className="flex items-center ">
+            <div className="flex items-center">
               <input
                 id="remember-me"
                 name="remember-me"
                 type="checkbox"
-                className="w-4 h-4 accent-primary"
+                className="w-4 h-4 accent-terracotta"
               />
-              <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">
+              <label htmlFor="remember-me" className="ml-2 block text-sm text-anthracite/70">
                 Se souvenir de moi
               </label>
             </div>
 
-            <div className="text-sm">
-              <Link
-                to="/forgot-password"
-                className="font-medium text-indigo-600 hover:text-indigo-500"
-              >
-                Mot de passe oublié ?
-              </Link>
-            </div>
+            <Link
+              to="/forgot-password"
+              className="text-sm font-medium text-terracotta hover:text-terracotta-dark"
+            >
+              Mot de passe oublié ?
+            </Link>
           </div>
 
-          <div>
-            <button
-              type="submit"
-              style={{ borderRadius: "12px" }}
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Se connecter
-            </button>
-          </div>
+          <button
+            type="submit"
+            className="w-full py-4 rounded-2xl text-white text-lg font-bold bg-terracotta hover:bg-terracotta-dark transition-colors"
+          >
+            Se connecter
+          </button>
 
           <div className="text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-anthracite/60">
               Pas encore de compte ?{" "}
-              <Link to="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
+              <Link
+                to="/register"
+                className="font-semibold text-terracotta hover:text-terracotta-dark"
+              >
                 {"S'inscrire"}
               </Link>
             </p>

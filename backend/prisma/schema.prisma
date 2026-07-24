@@ -1,6 +1,9 @@
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+  // linux-musl-openssl-3.0.x : image backend (Alpine, node:20-alpine)
+  // rhel-openssl-3.0.x : Lambda de reservation (base Amazon Linux 2023,
+  // glibc pas musl - voir lambda/booking-processor et docs/decisions.md Phase 6)
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "rhel-openssl-3.0.x"]
 }
 
 datasource db {
@@ -12,9 +15,22 @@ datasource db {
 // Enums
 // ─────────────────────────────────────────
 
-enum UserRole {
-  USER
+enum UserType {
+  TRAVELER
+  COMPANY_MEMBER
   ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+enum CompanyMemberRole {
+  OWNER
+  MANAGER
+  AGENT
 }
 
 enum BookingStatus {
@@ -23,44 +39,161 @@ enum BookingStatus {
   CANCELLED
 }
 
+enum BookingChannel {
+  ONLINE
+  COUNTER
+}
+
+enum CompanyStatus {
+  PENDING
+  VERIFIED
+  SUSPENDED
+  REJECTED
+}
+
+enum ParcelStatus {
+  REGISTERED
+  IN_TRANSIT
+  AWAITING_PICKUP
+  DELIVERED
+}
+
+enum DisputeStatus {
+  OPEN
+  RESOLVED
+}
+
+enum DisputePriority {
+  LOW
+  NORMAL
+  HIGH
+}
+
 // ─────────────────────────────────────────
-// Models
+// Auth — central user table
 // ─────────────────────────────────────────
 
 model User {
-  id                  String    @id @default(cuid())
-  name                String?
-  email               String    @unique
-  password            String
-  role                UserRole  @default(USER)
-  phone               String?
-  address             String?
-  isBlocked           Boolean   @default(false)
-  resetPasswordToken  String?
-  resetPasswordExpire DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+  id        String     @id @default(cuid())
+  email     String     @unique
+  password  String
+  userType  UserType   @default(TRAVELER)
+  status    UserStatus @default(PENDING_VERIFICATION)
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
-  bookings Booking[]
-  reviews  Review[]
+  travelerProfile TravelerProfile?
+  companyMember   CompanyMember?
+  adminProfile    AdminProfile?
+  sessions        UserSession[]
+  auditLogs       AuditLog[]
+  bookings        Booking[]
+  reviews         Review[]
+  parcels         Parcel[]
+  disputes        Dispute[]
+  bookingRequests BookingRequest[]
 }
 
-model Company {
-  id                  String    @id @default(cuid())
-  companyName         String    @unique
-  email               String    @unique
-  password            String
-  isBlocked           Boolean   @default(false)
-  resetPasswordToken  String?
-  resetPasswordExpire DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
+model TravelerProfile {
+  id      String  @id @default(cuid())
+  userId  String  @unique
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name    String?
+  phone   String?
+  address String?
+}
 
-  buses    Bus[]
-  stations Station[]
-  trips    Trip[]
-  bookings Booking[]
-  reviews  Review[]
+model CompanyMember {
+  id        String            @id @default(cuid())
+  userId    String            @unique
+  user      User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  companyId String
+  company   Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  role      CompanyMemberRole @default(AGENT)
+  createdAt DateTime          @default(now())
+
+  @@index([companyId])
+}
+
+model AdminProfile {
+  id     String  @id @default(cuid())
+  userId String  @unique
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name   String?
+}
+
+// ─────────────────────────────────────────
+// Sessions & security
+// ─────────────────────────────────────────
+
+model UserSession {
+  id           String   @id @default(cuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshToken String   @unique
+  expiresAt    DateTime
+  userAgent    String?
+  ipAddress    String?
+  createdAt    DateTime @default(now())
+
+  @@index([userId])
+}
+
+model Invitation {
+  id        String            @id @default(cuid())
+  email     String
+  companyId String
+  company   Company           @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  role      CompanyMemberRole @default(AGENT)
+  token     String            @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime          @default(now())
+
+  @@index([companyId])
+  @@index([email])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String
+  metadata  Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+// ─────────────────────────────────────────
+// Business models
+// ─────────────────────────────────────────
+
+model Company {
+  id          String        @id @default(cuid())
+  companyName String        @unique
+  email       String        @unique
+  status      CompanyStatus @default(VERIFIED)
+  rccm        String?
+  ifu         String?
+  contactName String?
+  contactPhone String?
+  routesNote  String?
+  requestedAt DateTime      @default(now())
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  members     CompanyMember[]
+  invitations Invitation[]
+  buses       Bus[]
+  stations    Station[]
+  trips       Trip[]
+  bookings    Booking[]
+  reviews     Review[]
+  parcels     Parcel[]
+  disputes    Dispute[]
+  lignes      Ligne[]
 }
 
 model Bus {
@@ -111,20 +244,45 @@ model Trip {
   departureStationId String
   arrivalStation     Station  @relation("ArrivalStation", fields: [arrivalStationId], references: [id])
   arrivalStationId   String
+  ligne              Ligne?   @relation(fields: [ligneId], references: [id])
+  ligneId            String?
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  bookings Booking[]
+  bookings        Booking[]
+  bookingRequests BookingRequest[]
+  bookingSeats    BookingSeat[]
 
   @@index([companyId])
   @@index([busId])
   @@index([date])
+  @@index([ligneId])
+}
+
+model Ligne {
+  id            String   @id @default(cuid())
+  company       Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId     String
+  from          String
+  to            String
+  code          String
+  duration      String?
+  standardPrice Float
+  vipPrice      Float?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  trips Trip[]
+
+  @@unique([companyId, code])
+  @@index([companyId])
 }
 
 model Booking {
-  id            String        @id @default(cuid())
+  id            String         @id @default(cuid())
   seats         String[]
-  status        BookingStatus @default(ACTIVE)
+  status        BookingStatus  @default(ACTIVE)
+  channel       BookingChannel @default(ONLINE)
   transactionId String
   user          User          @relation(fields: [userId], references: [id])
   userId        String
@@ -135,9 +293,61 @@ model Booking {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
+  disputes       Dispute[]
+  bookingRequest BookingRequest?
+
   @@index([userId])
   @@index([tripId])
   @@index([companyId])
+}
+
+// ─────────────────────────────────────────
+// Reservation asynchrone (SQS + Lambda, voir docs/decisions.md Phase 6)
+// ─────────────────────────────────────────
+
+enum BookingRequestStatus {
+  PENDING
+  CONFIRMED
+  REJECTED
+}
+
+// Une demande de reservation, traitee de facon asynchrone par la Lambda.
+// La garantie "zero double reservation" ne vient PAS de l'ordre de la
+// queue SQS FIFO (premiere ligne de defense, pas une preuve), mais de la
+// contrainte @@unique sur BookingSeat ci-dessous - meme si deux messages
+// du meme trip finissaient traites en parallele, un seul pourrait inserer
+// une ligne BookingSeat pour un siege donne.
+model BookingRequest {
+  id            String               @id @default(cuid())
+  seats         String[]
+  status        BookingRequestStatus @default(PENDING)
+  transactionId String
+  user          User                 @relation(fields: [userId], references: [id])
+  userId        String
+  trip          Trip                 @relation(fields: [tripId], references: [id])
+  tripId        String
+  booking       Booking?             @relation(fields: [bookingId], references: [id])
+  bookingId     String?              @unique
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+
+  bookingSeats BookingSeat[]
+
+  @@index([userId])
+  @@index([tripId])
+}
+
+model BookingSeat {
+  id               String         @id @default(cuid())
+  trip             Trip           @relation(fields: [tripId], references: [id])
+  tripId           String
+  seat             String
+  bookingRequest   BookingRequest @relation(fields: [bookingRequestId], references: [id])
+  bookingRequestId String
+  createdAt        DateTime       @default(now())
+
+  @@unique([tripId, seat])
+  @@index([bookingRequestId])
 }
 
 model Review {
@@ -152,4 +362,43 @@ model Review {
   updatedAt DateTime @updatedAt
 
   @@index([companyId])
+}
+
+model Parcel {
+  id           String       @id @default(cuid())
+  trackingCode String       @unique
+  from         String
+  to           String
+  senderName   String
+  senderPhone  String
+  status       ParcelStatus @default(REGISTERED)
+  company      Company      @relation(fields: [companyId], references: [id])
+  companyId    String
+  sender       User?        @relation(fields: [senderId], references: [id])
+  senderId     String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  @@index([companyId])
+  @@index([senderId])
+}
+
+model Dispute {
+  id          String          @id @default(cuid())
+  reference   String          @unique
+  subject     String
+  description String?
+  priority    DisputePriority @default(NORMAL)
+  status      DisputeStatus   @default(OPEN)
+  company     Company         @relation(fields: [companyId], references: [id])
+  companyId   String
+  user        User?           @relation(fields: [userId], references: [id])
+  userId      String?
+  booking     Booking?        @relation(fields: [bookingId], references: [id])
+  bookingId   String?
+  createdAt   DateTime        @default(now())
+  resolvedAt  DateTime?
+
+  @@index([companyId])
+  @@index([status])
 }

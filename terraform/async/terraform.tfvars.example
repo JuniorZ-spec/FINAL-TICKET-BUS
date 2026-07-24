@@ -1,0 +1,2 @@
+lambda_image_tag = "sha-<commit-a-deployer>"
+alert_email      = "ton_email@example.com"
