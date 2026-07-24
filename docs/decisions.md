@@ -304,3 +304,46 @@ indépendamment de l'ordre d'arrivée des messages SQS.
 
 Phase 6 terminée et vérifiée. Prochaine étape : Phase 7 (test de charge
 k6, 50 utilisateurs / 40 sièges).
+
+---
+
+## Phase 7 — Test de charge k6 (2026-07-24)
+
+**Script** : `loadtest/booking-race.js`. 50 VUs, 1 itération chacun,
+executor `per-vu-iterations`. Chaque VU vise le siège `((VU-1) % 40) + 1`
+sur un trajet à 40 places : les VU 1-40 obtiennent chacun un siège unique,
+les VU 41-50 retombent sur les sièges 1-10 déjà pris par les 10 premiers —
+40 confirmations et 10 refus attendus par construction, pas par chance.
+Chaque VU poll `GET /api/bookings/requests/:id` jusqu'à résolution (budget
+30s) plutôt que de supposer un délai fixe.
+
+**Premier run (invalidé)** : lancé sur le trajet utilisé pour les tests
+manuels de la Phase 6 (sièges 1 et 5 déjà réservés) → 38 confirmées / 12
+refusées. Résultat cohérent mais pas le chiffre visé, pour une raison
+d'hygiène de test (données polluées), pas un bug. Corrigé en ajoutant
+`backend/scripts/seedFreshTrip.ts` (un trajet neuf, 40 sièges libres,
+réutilisable à chaque rejeu) et en filtrant côté k6 sur
+`availableSeats === 40` dans `setup()`.
+
+**Résultat officiel, sur un trajet entièrement vierge :**
+
+```
+booking_confirmed: 40   (seuil 'count==40' ✓)
+booking_rejected:  10   (seuil 'count==10' ✓)
+booking_enqueue_errors: 0
+booking_timed_out: 0
+http_req_failed: 0.00% (0/109)
+```
+
+**Vérification indépendante en base** (pas seulement via l'API) :
+
+```sql
+SELECT "tripId", seat, COUNT(*) FROM "BookingSeat" GROUP BY "tripId", seat HAVING COUNT(*) > 1;
+-- []  (aucune ligne, sur 80 lignes BookingSeat au total tous tests cumulés)
+```
+
+Exactement l'objectif du projet : 40 confirmations, 10 refus propres, zéro
+doublon — vérifié à la fois côté API et par une requête SQL directe contre
+la base réelle.
+
+Phase 7 terminée et vérifiée.
