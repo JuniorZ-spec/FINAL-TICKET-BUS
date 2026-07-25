@@ -1,0 +1,13 @@
+# Contexte de build de lambda/booking-processor/Dockerfile (racine du repo,
+# necessaire pour copier backend/prisma sans dupliquer le schema).
+node_modules
+**/node_modules
+.git
+terraform
+docs
+client/dist
+client/build
+backend/dist
+*.md
+.env
+**/.env

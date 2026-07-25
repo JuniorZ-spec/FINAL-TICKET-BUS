@@ -1,10 +1,11 @@
 import React from "react";
 import { Form, message } from "antd";
-import { Mail, Lock, Users, User } from "lucide-react";
+import { ArrowLeft, Mail, Lock, User as UserIcon, Users } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import { useDispatch } from "react-redux";
 import { ShowLoading, HideLoading } from "../redux/alertsSlice";
+import WaxPattern from "../components/WaxPattern";
 
 function Register() {
   const dispatch = useDispatch();
@@ -28,73 +29,89 @@ function Register() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-blue-100 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full mx-auto">
-        <div className="text-center">
-          <div className="mx-auto h-16 w-16 bg-indigo-100 rounded-full flex items-center justify-center">
-            <Users className="h-8 w-8 text-indigo-600" />
+    <div className="relative min-h-screen bg-offwhite py-12 px-4 sm:px-6 lg:px-8">
+      <WaxPattern />
+      <button
+        onClick={() => navigate(-1)}
+        className="absolute z-10 top-8 left-8 flex items-center text-anthracite/60 hover:text-anthracite font-medium"
+      >
+        <ArrowLeft className="h-5 w-5 mr-2" />
+        Retour
+      </button>
+
+      <div className="relative z-10 max-w-md w-full mx-auto bg-white rounded-2xl border border-gray-200 shadow-sm p-8 mt-16">
+        <div className="text-center mb-8">
+          <div className="mx-auto h-20 w-20 bg-brand-green/10 rounded-full flex items-center justify-center">
+            <Users className="h-9 w-9 text-brand-green" />
           </div>
-          <h2 className="mt-6 text-3xl font-extrabold text-gray-900">Créer un compte</h2>
-          <p className="mt-2 text-sm text-gray-600">
-            Rejoignez Ticket Minute et réservez vos voyages en quelques clics
+          <h2 className="mt-6 text-3xl font-extrabold text-anthracite">Créer un compte</h2>
+          <p className="mt-2 text-lg text-anthracite/60">
+            Rejoignez AliGo et réservez vos voyages en quelques clics
           </p>
         </div>
 
-        <Form layout="vertical" className="mt-8 space-y-6" onFinish={onFinish}>
+        <Form layout="vertical" className="space-y-5" onFinish={onFinish}>
           <div className="space-y-4">
-            <Form.Item
-              name="name"
-              rules={[{ required: true, message: "Veuillez entrer votre nom" }]}
-            >
-              <div className="relative">
+            <div className="relative">
+              <UserIcon className="absolute z-10 left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-anthracite/30" />
+              <Form.Item
+                name="name"
+                rules={[{ required: true, message: "Veuillez entrer votre nom" }]}
+                className="!mb-0"
+              >
                 <input
                   type="text"
                   placeholder="Nom complet"
-                  className="appearance-none rounded-lg block w-full pl-12 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="w-full pl-12 pr-3 py-3 border border-gray-200 rounded-xl placeholder-anthracite/30 text-anthracite focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green text-base"
                 />
-              </div>
-            </Form.Item>
+              </Form.Item>
+            </div>
 
-            <Form.Item
-              name="email"
-              rules={[{ required: true, message: "Veuillez entrer votre email" }]}
-            >
-              <div className="relative">
+            <div className="relative">
+              <Mail className="absolute z-10 left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-anthracite/30" />
+              <Form.Item
+                name="email"
+                rules={[{ required: true, message: "Veuillez entrer votre email" }]}
+                className="!mb-0"
+              >
                 <input
                   type="email"
                   placeholder="Adresse email"
-                  className="appearance-none rounded-lg block w-full pl-12 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="w-full pl-12 pr-3 py-3 border border-gray-200 rounded-xl placeholder-anthracite/30 text-anthracite focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green text-base"
                 />
-              </div>
-            </Form.Item>
+              </Form.Item>
+            </div>
 
-            <Form.Item
-              name="password"
-              rules={[{ required: true, message: "Veuillez entrer un mot de passe" }]}
-            >
-              <div className="relative">
+            <div className="relative">
+              <Lock className="absolute z-10 left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-anthracite/30" />
+              <Form.Item
+                name="password"
+                rules={[{ required: true, message: "Veuillez entrer un mot de passe" }]}
+                className="!mb-0"
+              >
                 <input
                   type="password"
                   placeholder="Mot de passe"
-                  className="appearance-none rounded-lg   block w-full pl-12 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="w-full pl-12 pr-3 py-3 border border-gray-200 rounded-xl placeholder-anthracite/30 text-anthracite focus:outline-none focus:ring-2 focus:ring-brand-green/30 focus:border-brand-green text-base"
                 />
-              </div>
-            </Form.Item>
+              </Form.Item>
+            </div>
           </div>
 
-          <div>
-            <button
-              type="submit"
-              className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-sm font-medium rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-            >
-              Créer un compte
-            </button>
-          </div>
+          <button
+            type="submit"
+            className="w-full py-4 rounded-2xl text-white text-lg font-bold bg-brand-green hover:bg-brand-green-dark transition-colors"
+          >
+            Créer un compte
+          </button>
 
           <div className="text-center">
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-anthracite/60">
               Vous avez déjà un compte ?{" "}
-              <Link to="/login" className="font-medium text-indigo-600 hover:text-indigo-500">
+              <Link
+                to="/login"
+                className="font-semibold text-terracotta hover:text-terracotta-dark"
+              >
                 Connectez-vous
               </Link>
             </p>

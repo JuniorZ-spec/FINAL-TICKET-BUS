@@ -1,53 +1,41 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
-import { Table, message, Modal } from "antd";
-import { useReactToPrint } from "react-to-print";
-import { Bus, Calendar, Clock, MapPin, Users, CreditCard, Printer, XCircle } from "lucide-react";
+import { message } from "antd";
+import { MapPin, Calendar, Clock, X, Search } from "lucide-react";
 
 import { ShowLoading, HideLoading } from "../../redux/alertsSlice";
 import { axiosInstance } from "../../helpers/axiosInstance";
-import PageTitle from "../../components/PageTitle";
 
-function Bookings() {
+function CompanyBookings() {
   const dispatch = useDispatch();
   const [bookings, setBookings] = useState([]);
-  const [showPrintModal, setShowPrintModal] = useState(false);
-  const [selectedBooking, setSelectedBooking] = useState(null);
-  const contentRef = useRef(null);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const getBookings = async () => {
     try {
       dispatch(ShowLoading());
       const response = await axiosInstance.get("/api/bookings/get-company-bookings");
-      dispatch(HideLoading());
-
       if (response.data.success) {
-        const mappedData = response.data.data.map((booking) => ({
-          ...booking,
-          busName: booking.trip?.bus?.name || "N/A",
-          passengerName: booking.user?.name || "N/A",
-          busNumber: booking.trip?.bus?.number || "N/A",
-          from: booking.trip?.from || "N/A",
-          to: booking.trip?.to || "N/A",
-          fare: booking.trip?.price || 0,
-          departureDate: booking.trip?.date?.substring(0, 10) || "N/A",
-          departureTime: booking.trip?.departureTime || "N/A",
-          departureStation: booking.trip?.departureStation?.name || "N/A",
-          arrivalStation: booking.trip?.arrivalStation?.name || "N/A",
-          seats: Array.isArray(booking.seats)
-            ? booking.seats.map((s) => (typeof s === "string" ? s : s?.number || "N/A"))
-            : [],
-          companyName: booking.company?.companyName || "N/A",
+        const mapped = response.data.data.map((booking) => ({
           key: booking.id,
+          passengerName: booking.user?.travelerProfile?.name || booking.user?.email || "Voyageur",
+          from: booking.trip?.from || "—",
+          to: booking.trip?.to || "—",
+          busName: booking.trip?.bus?.name || "—",
+          fare: booking.trip?.price || 0,
+          date: booking.trip?.date || null,
+          time: booking.trip?.departureTime || "—",
+          seats: Array.isArray(booking.seats) ? booking.seats : [],
+          status: booking.status || "ACTIVE",
         }));
-
-        setBookings(mappedData);
+        setBookings(mapped);
       } else {
         message.error(response.data.message);
       }
     } catch (error) {
-      dispatch(HideLoading());
       message.error(error.response?.data?.message || error.message);
+    } finally {
+      dispatch(HideLoading());
     }
   };
 
@@ -55,8 +43,6 @@ function Bookings() {
     try {
       dispatch(ShowLoading());
       const response = await axiosInstance.post("/api/bookings/cancel-booking", { bookingId });
-      dispatch(HideLoading());
-
       if (response.data.success) {
         message.success("Réservation annulée");
         getBookings();
@@ -64,131 +50,113 @@ function Bookings() {
         message.error(response.data.message);
       }
     } catch (error) {
-      dispatch(HideLoading());
       message.error(error.response?.data?.message || error.message);
+    } finally {
+      dispatch(HideLoading());
     }
   };
-
-  const reactToPrintFn = useReactToPrint({
-    content: () => contentRef.current,
-  });
 
   useEffect(() => {
     getBookings();
   }, []);
 
-  const columns = [
-    {
-      title: "Passager",
-      render: (_, record) => (
-        <div className="flex items-center gap-2 text-gray-800 text-sm">
-          <Users className="w-4 h-4 text-gray-500" />
-          <span>{record.passengerName}</span>
-        </div>
-      ),
-    },
-    {
-      title: "Trajet",
-      render: (_, record) => (
-        <div className="space-y-1 text-sm">
-          <div className="flex items-center gap-1">
-            <MapPin className="w-4 h-4 text-green-600" />
-            <span>{record.from}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <MapPin className="w-4 h-4 text-blue-600" />
-            <span>{record.to}</span>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "Bus",
-      render: (_, record) => (
-        <div className="space-y-1 text-sm">
-          <div className="flex items-center gap-1 text-gray-700">
-            <Bus className="w-4 h-4 text-gray-500" />
-            <span>{record.busName}</span>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "Date & Heure",
-      render: (_, record) => (
-        <div className="space-y-1 text-sm text-gray-700">
-          <div className="flex items-center gap-1">
-            <Calendar className="w-4 h-4 text-gray-500" />
-            <span>{record.departureDate}</span>
-          </div>
-          <div className="flex items-center gap-1">
-            <Clock className="w-4 h-4 text-gray-500" />
-            <span>{record.departureTime}</span>
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "Stations",
-      render: (_, record) => (
-        <div className="space-y-1 text-xs text-gray-700">
-          <div>{record.departureStation}</div>
-          <div> {record.arrivalStation}</div>
-        </div>
-      ),
-    },
-    {
-      title: "Places",
-      dataIndex: "seats",
-      render: (seats) => (
-        <span className="text-xs font-mono bg-blue-100 text-blue-800 px-2 py-1 rounded">
-          {seats.length > 0 ? seats.join(", ") : "N/A"}
-        </span>
-      ),
-    },
-    {
-      title: "Montant",
-      render: (_, record) => (
-        <div className="flex items-center justify-end gap-2 text-sm font-semibold text-gray-800">
-          <CreditCard className="w-4 h-4 text-green-600" />
-          <span>{new Intl.NumberFormat("fr-FR").format(record.fare * record.seats.length)} F</span>
-        </div>
-      ),
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      render: (_, record) => (
-        <button
-          onClick={() => cancelBooking(record.key)}
-          className="px-3 py-1.5 bg-red-600 text-white rounded-md hover:bg-red-700 text-xs"
-          style={{ borderRadius: "8px" }}
-        >
-          Annuler
-        </button>
-      ),
-    },
-  ];
+  const formatPrice = (price) => new Intl.NumberFormat("fr-FR").format(price) + " FCFA";
+
+  const filtered = bookings.filter((b) =>
+    b.passengerName.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="p-2 bg-gray-100 min-h-screen">
-      <Table
-        dataSource={bookings}
-        columns={columns}
-        rowKey="key"
-        bordered
-        pagination={{
-          pageSize: 6,
-          showSizeChanger: true,
-          pageSizeOptions: ["5", "6", "10", "20"],
-          showTotal: (total) => `Total : ${total} réservations`,
-        }}
-        locale={{ emptyText: "Aucune réservation disponible." }}
-        className="rounded-lg border border-gray-200 mt-4 shadow-sm"
-        scroll={{ x: true }}
-      />
+    <div className="max-w-7xl mx-auto">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+        <div>
+          <h1 className="text-xl font-bold text-anthracite">Réservations</h1>
+          <p className="text-sm text-anthracite/50 mt-0.5">{filtered.length} réservation(s)</p>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-anthracite/30" />
+          <input
+            type="text"
+            placeholder="Nom du passager..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/30"
+          />
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-100 text-left text-xs text-anthracite/40 uppercase tracking-wider">
+              <th className="px-5 py-3 font-semibold">Passager</th>
+              <th className="px-5 py-3 font-semibold">Trajet</th>
+              <th className="px-5 py-3 font-semibold">Bus</th>
+              <th className="px-5 py-3 font-semibold">Date & heure</th>
+              <th className="px-5 py-3 font-semibold">Places</th>
+              <th className="px-5 py-3 font-semibold">Montant</th>
+              <th className="px-5 py-3 font-semibold">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filtered.length === 0 ? (
+              <tr>
+                <td colSpan={7} className="px-5 py-12 text-center text-anthracite/40">
+                  Aucune réservation pour l&apos;instant.
+                </td>
+              </tr>
+            ) : (
+              filtered.map((b) => (
+                <tr key={b.key} className="border-b border-gray-50 last:border-0">
+                  <td className="px-5 py-3 font-semibold text-anthracite">{b.passengerName}</td>
+                  <td className="px-5 py-3 text-anthracite/70">
+                    <div className="flex items-center gap-1 text-xs">
+                      <MapPin size={12} className="text-brand-green" /> {b.from}
+                    </div>
+                    <div className="flex items-center gap-1 text-xs mt-0.5">
+                      <MapPin size={12} className="text-terracotta" /> {b.to}
+                    </div>
+                  </td>
+                  <td className="px-5 py-3 text-anthracite/70">{b.busName}</td>
+                  <td className="px-5 py-3 text-anthracite/70 text-xs">
+                    <div className="flex items-center gap-1">
+                      <Calendar size={12} />{" "}
+                      {b.date ? new Date(b.date).toLocaleDateString("fr-FR") : "—"}
+                    </div>
+                    <div className="flex items-center gap-1 mt-0.5">
+                      <Clock size={12} /> {b.time}
+                    </div>
+                  </td>
+                  <td className="px-5 py-3">
+                    <span className="text-xs font-mono bg-offwhite text-anthracite/70 px-2 py-1 rounded-lg">
+                      {b.seats.length > 0 ? b.seats.join(", ") : "—"}
+                    </span>
+                  </td>
+                  <td className="px-5 py-3 font-semibold text-anthracite">
+                    {formatPrice(b.fare * b.seats.length)}
+                  </td>
+                  <td className="px-5 py-3">
+                    {b.status === "ACTIVE" ? (
+                      <button
+                        onClick={() => cancelBooking(b.key)}
+                        className="flex items-center gap-1.5 text-xs font-semibold text-red-500 hover:bg-red-50 px-3 py-1.5 rounded-lg transition-colors"
+                      >
+                        <X size={13} /> Annuler
+                      </button>
+                    ) : (
+                      <span className="text-xs text-anthracite/40 capitalize">
+                        {b.status.toLowerCase()}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
 
-export default Bookings;
+export default CompanyBookings;

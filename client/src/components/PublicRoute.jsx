@@ -9,14 +9,14 @@ export default function PublicRoute({ children }) {
     const role = localStorage.getItem("role");
 
     if (token) {
-      // Redirection selon le rôle
+      // Déjà connecté : inutile de revoir une page publique (login/register)
       if (role === "company") {
         navigate("/company");
+      } else if (role === "admin") {
+        navigate("/admin");
       } else {
         navigate("/");
       }
-    } else {
-      navigate("/roleselector");
     }
   }, []);
 

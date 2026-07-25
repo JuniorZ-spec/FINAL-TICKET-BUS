@@ -4,6 +4,9 @@ import { useDispatch } from "react-redux";
 import { axiosInstance } from "../helpers/axiosInstance";
 import { useEffect, useState } from "react";
 import moment from "moment";
+import { MapPin, Wallet, Clock } from "lucide-react";
+
+const iconProps = { size: 15, className: "text-anthracite/30" };
 
 function TripForm({
   showTripForm,
@@ -108,6 +111,7 @@ function TripForm({
               rules={[{ required: true, message: "Veuillez entrer la ville de départ" }]}
             >
               <Input
+                prefix={<MapPin {...iconProps} />}
                 placeholder="Entrez la ville de départ"
                 onChange={(e) => setFromCity(e.target.value)}
               />
@@ -120,6 +124,7 @@ function TripForm({
               rules={[{ required: true, message: "Veuillez entrer la ville d'arrivée" }]}
             >
               <Input
+                prefix={<MapPin {...iconProps} />}
                 placeholder="Entrez la ville d'arrivée"
                 onChange={(e) => setToCity(e.target.value)}
               />
@@ -194,7 +199,11 @@ function TripForm({
               name="price"
               rules={[{ required: true, message: "Veuillez entrer le prix" }]}
             >
-              <Input type="number" placeholder="Entrez le prix" />
+              <Input
+                prefix={<Wallet {...iconProps} />}
+                type="number"
+                placeholder="Entrez le prix"
+              />
             </Form.Item>
           </Col>
           <Col lg={12} xs={24}>
@@ -203,21 +212,24 @@ function TripForm({
               name="departureTime"
               rules={[{ required: true, message: "Veuillez entrer l'heure de départ" }]}
             >
-              <Input placeholder="Entrez l'heure de départ (ex: 08:30)" />
+              <Input
+                prefix={<Clock {...iconProps} />}
+                placeholder="Entrez l'heure de départ (ex: 08:30)"
+              />
             </Form.Item>
           </Col>
         </Row>
 
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 mt-2">
           <button
             type="button"
-            className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition"
+            className="bg-gray-100 text-anthracite/70 px-6 py-2 rounded-lg hover:bg-gray-200 transition"
             onClick={() => setShowTripForm(false)}
           >
             Annuler
           </button>
           <button
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+            className="bg-terracotta text-white px-6 py-2 rounded-lg hover:bg-terracotta-dark transition"
             type="submit"
           >
             Sauvegarder

@@ -1,0 +1,9 @@
+backend_image_tag = "sha-<commit-a-deployer>"
+
+db_master_username = "ticketbus"
+db_master_password = "change_this_password"
+
+jwt_secret   = "change_this_secret"
+email        = "your_email@gmail.com"
+email_pass   = "your_gmail_app_password"
+frontend_url = "https://<distribution>.cloudfront.net"

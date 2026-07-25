@@ -43,3 +43,12 @@ backend/coverage/
 
 # Prisma
 backend/prisma/migrations/**/*.env
+
+# Terraform
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfvars
+!*.tfvars.example
+crash.log
+crash.*.log
