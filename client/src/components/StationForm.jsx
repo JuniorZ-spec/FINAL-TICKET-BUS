@@ -2,6 +2,9 @@ import { Form, Modal, Row, Col, message, Input } from "antd";
 import { HideLoading, ShowLoading } from "../redux/alertsSlice";
 import { useDispatch } from "react-redux";
 import { axiosInstance } from "../helpers/axiosInstance";
+import { Building2, MapPin, Landmark } from "lucide-react";
+
+const iconProps = { size: 15, className: "text-anthracite/30" };
 
 function StationForm({
   showStationForm,
@@ -28,8 +31,6 @@ function StationForm({
         );
       }
 
-      dispatch(HideLoading());
-
       if (response.data.success) {
         message.success(response.data.message);
         getData();
@@ -39,15 +40,16 @@ function StationForm({
         message.error(response.data.message);
       }
     } catch (error) {
-      dispatch(HideLoading());
       message.error(error.response?.data?.message || "Erreur lors de la sauvegarde de la station");
+    } finally {
+      dispatch(HideLoading());
     }
   };
 
   return (
     <Modal
       width={600}
-      title={type === "add" ? "Ajouter une Station" : "Mettre à jour la Station"}
+      title={type === "add" ? "Ajouter une gare" : "Modifier la gare"}
       open={showStationForm}
       onCancel={() => {
         setSelectedStation(null);
@@ -59,11 +61,14 @@ function StationForm({
         <Row gutter={[10, 10]}>
           <Col lg={24} xs={24}>
             <Form.Item
-              label="Nom de la station"
+              label="Nom de la gare"
               name="name"
-              rules={[{ required: true, message: "Veuillez entrer le nom de la station" }]}
+              rules={[{ required: true, message: "Veuillez entrer le nom de la gare" }]}
             >
-              <Input placeholder="Entrez le nom de la station" />
+              <Input
+                prefix={<Landmark {...iconProps} />}
+                placeholder="Ex : Gare routière de Cotonou"
+              />
             </Form.Item>
           </Col>
         </Row>
@@ -73,9 +78,9 @@ function StationForm({
             <Form.Item
               label="Adresse"
               name="address"
-              rules={[{ required: true, message: "Veuillez entrer l'adresse de la station" }]}
+              rules={[{ required: true, message: "Veuillez entrer l'adresse de la gare" }]}
             >
-              <Input placeholder="Entrez l'adresse de la station" />
+              <Input prefix={<MapPin {...iconProps} />} placeholder="Ex : Etoile Rouge, Cotonou" />
             </Form.Item>
           </Col>
         </Row>
@@ -87,21 +92,21 @@ function StationForm({
               name="city"
               rules={[{ required: true, message: "Veuillez entrer la ville" }]}
             >
-              <Input placeholder="Entrez la ville" />
+              <Input prefix={<Building2 {...iconProps} />} placeholder="Ex : Cotonou" />
             </Form.Item>
           </Col>
         </Row>
 
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 mt-2">
           <button
             type="button"
-            className="bg-gray-200 text-gray-800 px-6 py-2 rounded-lg hover:bg-gray-300 transition"
+            className="bg-gray-100 text-anthracite/70 px-6 py-2 rounded-lg hover:bg-gray-200 transition"
             onClick={() => setShowStationForm(false)}
           >
             Annuler
           </button>
           <button
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+            className="bg-terracotta text-white px-6 py-2 rounded-lg hover:bg-terracotta-dark transition"
             type="submit"
           >
             Sauvegarder

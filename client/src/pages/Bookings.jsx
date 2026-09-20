@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Calendar, Clock, MapPin, Users, CreditCard, Printer, X } from "lucide-react";
+import { Calendar, Clock, MapPin, Users, CreditCard, Printer, X, Star } from "lucide-react";
 import { Modal, message } from "antd";
 import { axiosInstance } from "../helpers/axiosInstance";
 import PrintTicket from "../components/PrintTicket";
@@ -8,26 +8,40 @@ export default function Bookings() {
   const [bookings, setBookings] = useState([]);
   const [selectedBooking, setSelectedBooking] = useState(null);
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const [reviewBooking, setReviewBooking] = useState(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewContent, setReviewContent] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
 
   const getBookings = async () => {
     try {
       const response = await axiosInstance.post("/api/bookings/get-bookings");
       if (response.data.success) {
-        const mapped = response.data.data.map((b) => ({
-          ...b,
-          company: b.trip?.company?.companyName || "N/A",
-          passengerName: b.user?.name || "Utilisateur",
-          price: b.trip?.price || 0,
-          date: b.trip?.date,
-          departureTime: b.trip?.departureTime,
-          departureCity: b.trip?.from,
-          arrivalCity: b.trip?.to,
-          seats: Array.isArray(b.seats) ? b.seats : [],
-          status: b.status || "ACTIVE",
-          companyLogo: "🚌",
-          departureStation: b.trip?.departureStation?.name,
-          arrivalStation: b.trip?.arrivalStation?.name,
-        }));
+        const mapped = response.data.data.map((b) => {
+          const [h, m] = (b.trip?.departureTime || "00:00").split(":").map(Number);
+          const base = b.trip?.date ? new Date(b.trip.date) : null;
+          const tripDateTime = base
+            ? new Date(base.getFullYear(), base.getMonth(), base.getDate(), h, m)
+            : null;
+
+          return {
+            ...b,
+            company: b.trip?.company?.companyName || "N/A",
+            passengerName: b.user?.name || "Utilisateur",
+            price: b.trip?.price || 0,
+            date: b.trip?.date,
+            departureTime: b.trip?.departureTime,
+            departureCity: b.trip?.from,
+            arrivalCity: b.trip?.to,
+            seats: Array.isArray(b.seats) ? b.seats : [],
+            status: b.status || "ACTIVE",
+            companyLogo: "🚌",
+            departureStation: b.trip?.departureStation?.name,
+            arrivalStation: b.trip?.arrivalStation?.name,
+            hasReview: Boolean(b.review),
+            isPast: tripDateTime ? tripDateTime <= new Date() : false,
+          };
+        });
         setBookings(mapped);
       } else {
         message.error(response.data.message);
@@ -54,6 +68,36 @@ export default function Bookings() {
       }
     } catch (err) {
       message.error(err.message);
+    }
+  };
+
+  const submitReview = async () => {
+    if (!reviewBooking) return;
+    if (!reviewContent.trim()) {
+      message.error("Écrivez un mot sur votre trajet avant d'envoyer.");
+      return;
+    }
+
+    try {
+      setSubmittingReview(true);
+      const response = await axiosInstance.post("/api/reviews/create", {
+        bookingId: reviewBooking.id,
+        rating: reviewRating,
+        content: reviewContent.trim(),
+      });
+      if (response.data.success) {
+        message.success(response.data.message);
+        setReviewBooking(null);
+        setReviewContent("");
+        setReviewRating(5);
+        getBookings();
+      } else {
+        message.error(response.data.message);
+      }
+    } catch (err) {
+      message.error(err.response?.data?.message || err.message);
+    } finally {
+      setSubmittingReview(false);
     }
   };
 
@@ -207,6 +251,26 @@ export default function Bookings() {
                     >
                       Annuler
                     </button>
+                    {b.status === "ACTIVE" && b.isPast && !b.hasReview && (
+                      <button
+                        onClick={() => {
+                          setReviewBooking(b);
+                          setReviewRating(5);
+                          setReviewContent("");
+                        }}
+                        className="flex items-center gap-1 px-3 py-1.5 bg-terracotta text-white rounded-md hover:bg-terracotta-dark text-xs"
+                        style={{ borderRadius: "8px" }}
+                      >
+                        <Star className="w-4 h-4" />
+                        <span className="hidden xl:inline">Laisser un avis</span>
+                      </button>
+                    )}
+                    {b.hasReview && (
+                      <span className="flex items-center gap-1 px-3 py-1.5 text-xs text-anthracite/40">
+                        <Star className="w-3.5 h-3.5 fill-saffron text-saffron" />
+                        Avis envoyé
+                      </span>
+                    )}
                   </div>
                 </td>
               </tr>
@@ -262,6 +326,63 @@ export default function Bookings() {
                 className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50"
               >
                 Fermer
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Modal pour laisser un avis (uniquement pour un trajet réellement effectué) */}
+      <Modal
+        title="Laisser un avis"
+        open={!!reviewBooking}
+        onCancel={() => setReviewBooking(null)}
+        footer={null}
+      >
+        {reviewBooking && (
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
+              {reviewBooking.company} — {reviewBooking.departureCity} → {reviewBooking.arrivalCity}
+            </p>
+
+            <div className="flex items-center gap-1">
+              {[1, 2, 3, 4, 5].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => setReviewRating(n)}
+                  aria-label={`${n} étoile${n > 1 ? "s" : ""}`}
+                >
+                  <Star
+                    className={`w-7 h-7 ${
+                      n <= reviewRating ? "fill-saffron text-saffron" : "text-gray-300"
+                    }`}
+                  />
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              rows={4}
+              value={reviewContent}
+              onChange={(e) => setReviewContent(e.target.value)}
+              placeholder="Comment s'est passé votre trajet ?"
+              className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/30"
+            />
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setReviewBooking(null)}
+                className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={submitReview}
+                disabled={submittingReview}
+                className="px-4 py-2 bg-terracotta text-white rounded hover:bg-terracotta-dark text-sm font-semibold disabled:opacity-50"
+              >
+                {submittingReview ? "Envoi..." : "Envoyer l'avis"}
               </button>
             </div>
           </div>

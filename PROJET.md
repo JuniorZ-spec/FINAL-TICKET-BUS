@@ -12,6 +12,7 @@ Une plateforme SaaS de réservation de billets de bus, conçue pour le marché b
 **Le modèle :** plusieurs compagnies de transport s'inscrivent sur la plateforme. Les voyageurs recherchent des trajets, réservent et paient en ligne. La plateforme prend une commission sur chaque transaction et verse le reste à la compagnie.
 
 **Trois types d'acteurs :**
+
 - **Voyageurs** — cherchent des trajets, réservent, paient
 - **Compagnies** — gèrent leurs bus, trajets, réservations
 - **Admins** — gèrent la plateforme, valident les compagnies, fixent les commissions
@@ -20,19 +21,19 @@ Une plateforme SaaS de réservation de billets de bus, conçue pour le marché b
 
 ## 2. Stack technique
 
-| Couche | Technologie |
-|--------|-------------|
-| Backend | Node.js 20 / Express |
-| ORM | Prisma 5.22 |
-| Base de données | PostgreSQL (Neon cloud en dev, RDS AWS en prod) |
-| Cache / locks | Redis (WSL2 en dev local) |
-| Frontend | React 18 / Vite / Ant Design / Tailwind CSS |
-| État client | Redux Toolkit |
-| Paiement | KKiaPay (intégration à refondre — voir LOT 11) |
-| Auth | JWT + bcryptjs (en cours de refonte — voir LOT 8) |
-| Conteneurs | Docker / Docker Compose |
-| CI | GitHub Actions |
-| Hébergement cible | AWS ECS Fargate + RDS + ElastiCache |
+| Couche            | Technologie                                       |
+| ----------------- | ------------------------------------------------- |
+| Backend           | Node.js 20 / Express                              |
+| ORM               | Prisma 5.22                                       |
+| Base de données   | PostgreSQL (Neon cloud en dev, RDS AWS en prod)   |
+| Cache / locks     | Redis (WSL2 en dev local)                         |
+| Frontend          | React 18 / Vite / Ant Design / Tailwind CSS       |
+| État client       | Redux Toolkit                                     |
+| Paiement          | KKiaPay (intégration à refondre — voir LOT 11)    |
+| Auth              | JWT + bcryptjs (en cours de refonte — voir LOT 8) |
+| Conteneurs        | Docker / Docker Compose                           |
+| CI                | GitHub Actions                                    |
+| Hébergement cible | AWS ECS Fargate + RDS + ElastiCache               |
 
 ---
 
@@ -88,7 +89,9 @@ Review        ← avis d'un User sur une Company
 ## 5. Ce qui est fait
 
 ### Migration MongoDB → PostgreSQL/Prisma
+
 Le projet a été migré depuis une base MongoDB/Mongoose vers PostgreSQL via Prisma. Cette migration couvre :
+
 - Schéma Prisma complet (User, Company, Bus, Station, Trip, Booking, Review)
 - Tous les controllers réécrits avec Prisma (auth, admin, company, booking, trip, bus, station)
 - Frontend entièrement aligné sur la nouvelle API (champs `id` au lieu de `_id`, stations en objets uniques, etc.)
@@ -97,6 +100,7 @@ Le projet a été migré depuis une base MongoDB/Mongoose vers PostgreSQL via Pr
 - Redis pour le verrouillage des sièges lors des réservations
 
 ### LOT 1 — Discipline Git
+
 - Branche `develop` créée, `main` et `develop` protégées sur GitHub (PR obligatoire, 1 approbation minimum)
 - Workflow de branches : `feature/*`, `fix/*`, `refactor/*` → PR vers `develop` → release vers `main`
 - Husky + lint-staged : ESLint + Prettier s'exécutent automatiquement avant chaque commit
@@ -105,6 +109,7 @@ Le projet a été migré depuis une base MongoDB/Mongoose vers PostgreSQL via Pr
 - `CONTRIBUTING.md` : workflow Git, conventions de commits, règles de revue
 
 **Conventions de commits :**
+
 ```
 feat(scope): description     ← nouvelle fonctionnalité
 fix(scope): description      ← correction de bug
@@ -115,12 +120,14 @@ docs(scope): description     ← documentation
 ```
 
 ### LOT 6 — Docker
+
 - **Backend Dockerfile** : multi-stage (builder génère le client Prisma, runner = image minimale en user non-root)
 - **Frontend Dockerfile** : multi-stage (builder compile React/Vite, runner = nginx)
 - **docker-compose.yml** : orchestre backend + frontend + redis avec healthchecks
 - Endpoint `GET /health` sur le backend (utilisé par les healthchecks Docker et futur ECS)
 
 ### LOT 7 — CI GitHub Actions
+
 Pipeline déclenché sur chaque PR et push vers `main` ou `develop` :
 
 ```
@@ -161,6 +168,7 @@ npm run dev                  ← démarre sur http://localhost:5173
 ```
 
 **Via Docker (redis + backend + frontend) :**
+
 ```bash
 docker compose up --build
 # Backend  → http://localhost:5000
@@ -176,6 +184,7 @@ docker compose up --build
 **Pourquoi :** le modèle actuel (User/ADMIN + Company séparée) ne supporte pas le multi-tenant, ni les niveaux de sécurité requis.
 
 **Ce qui change dans le schéma :**
+
 ```
 users               ← table centrale (email, password_hash, user_type, statut, 2FA)
   ├── traveler_profiles    ← données voyageur
@@ -187,6 +196,7 @@ audit_logs          ← append-only, toutes les actions sensibles
 ```
 
 **Ce qui change dans l'API :**
+
 ```
 POST /api/traveler/auth/register
 POST /api/traveler/auth/login
@@ -198,6 +208,7 @@ POST /api/auth/logout
 ```
 
 **Points techniques clés :**
+
 - JWT 15 minutes (au lieu de 1 jour actuellement)
 - Refresh token en base, révocable, durée selon le type d'acteur
 - Chaque endpoint vérifie strictement le `user_type` — un admin qui tente `/traveler/login` reçoit une erreur générique
@@ -222,7 +233,7 @@ POST /api/auth/logout
 
 - `routes` : trajet entre deux arrêts
 - `schedules` : pattern de récurrence (RFC 5545 rrule)
-- `trips` : instances matérialisées par un job cron depuis les schedules
+- `trips` : instances matérialisées par un job cron depuis les
 - `stops` : arrêts partagés entre compagnies, gérés par l'admin
 
 ---
@@ -268,14 +279,14 @@ POST /api/auth/logout
 
 ## 8. Décisions techniques importantes
 
-| Décision | Raison |
-|----------|--------|
-| PostgreSQL (Neon) au lieu de MongoDB | Données relationnelles, contraintes FK, Row-Level Security, meilleures performances pour les requêtes multi-tenant |
-| Prisma au lieu de SQL brut | Migrations versionnées, type safety, DX, génération automatique du client |
-| Redis pour le verrouillage des sièges | Évite les doubles réservations sur le même siège sans transactions distribuées complexes |
-| JWT courte durée + refresh token | Un JWT longue durée ne peut pas être invalidé si un compte est compromis |
-| Multi-stage Dockerfile | Image de prod minimale (pas de devDeps, user non-root) |
-| Monorepo (backend + client dans le même repo) | Équipe réduite, deploy atomique, CI simplifié |
+| Décision                                      | Raison                                                                                                             |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| PostgreSQL (Neon) au lieu de MongoDB          | Données relationnelles, contraintes FK, Row-Level Security, meilleures performances pour les requêtes multi-tenant |
+| Prisma au lieu de SQL brut                    | Migrations versionnées, type safety, DX, génération automatique du client                                          |
+| Redis pour le verrouillage des sièges         | Évite les doubles réservations sur le même siège sans transactions distribuées complexes                           |
+| JWT courte durée + refresh token              | Un JWT longue durée ne peut pas être invalidé si un compte est compromis                                           |
+| Multi-stage Dockerfile                        | Image de prod minimale (pas de devDeps, user non-root)                                                             |
+| Monorepo (backend + client dans le même repo) | Équipe réduite, deploy atomique, CI simplifié                                                                      |
 
 ---
 
@@ -284,6 +295,7 @@ POST /api/auth/logout
 Voir `backend/.env.example` pour la liste complète et documentée.
 
 Variables critiques :
+
 - `DATABASE_URL` — connexion PostgreSQL (Neon en dev)
 - `REDIS_URL` — connexion Redis
 - `jwt_secret` — clé de signature JWT (**ne jamais commiter la vraie valeur**)

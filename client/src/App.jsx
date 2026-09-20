@@ -1,13 +1,17 @@
-import "./resourses/global.css";
-import "antd/dist/reset.css";
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { axiosInstance } from "./helpers/axiosInstance";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Home from "./pages/Home";
+import Colis from "./pages/Colis";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicRoute from "./components/PublicRoute";
+import DefaultLayout from "./components/DefaultLayout";
 import Loader from "./components/Loader";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { SetUser } from "./redux/usersSlice";
+import { normalizeUser } from "./helpers/normalizeUser";
 import AdminHome from "./pages/Admin/AdminHome";
 import AdminBuses from "./pages/Admin/AdminBuses";
 import AdminUsers from "./pages/Admin/AdminUsers";
@@ -15,35 +19,74 @@ import AdminCompanys from "./pages/Admin/AdminCompanys";
 import AdminBooking from "./pages/Admin/AdminBooking";
 import AdminTrips from "./pages/Admin/AdminTrips";
 import AdminSchema from "./pages/Admin/AdminSchema";
+import AdminLogin from "./pages/Admin/AdminLogin";
 import CompanyHome from "./pages/Company/CompanyHome";
 import CompanyBuses from "./pages/Company/CompanyBuses";
 import CompanyTrips from "./pages/Company/CompanyTrips";
 import CompanyLogin from "./pages/Company/CompanyLogin";
+import PartnerApply from "./pages/Company/PartnerApply";
 import CompanyBookings from "./pages/Company/CompanyBookings";
 import CompanyStations from "./pages/Company/CompanyStations";
+import CompanyFinances from "./pages/Company/CompanyFinances";
 import BookNow from "./pages/BookNow";
 import Bookings from "./pages/Bookings";
 import Profile from "./pages/Profile";
-import RoleSelector from "./pages/RoleSelector";
 import ForgotPassword from "./pages/ForgotPassword";
 import ResetPassword from "./pages/ResetPassword";
 // Assure-toi d'importer la page AdminTrajets
 
 function App() {
-  const { loading } = useSelector((state) => state.alerts);
+  const { loadingCount } = useSelector((state) => state.alerts);
+  const dispatch = useDispatch();
+
+  // Restaure la session (si un token existe) sans bloquer l'affichage des pages publiques
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    axiosInstance
+      .get("/api/users/profile")
+      .then((response) => {
+        if (response.data.success) {
+          dispatch(SetUser(normalizeUser(response.data.data)));
+        } else {
+          localStorage.removeItem("token");
+          localStorage.removeItem("refreshToken");
+        }
+      })
+      .catch(() => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+      });
+  }, []);
 
   return (
     <div>
-      {loading && <Loader />}
+      {loadingCount > 0 && <Loader />}
       <BrowserRouter>
         <Routes>
           <Route
             path="/"
             element={
-              <ProtectedRoute>
-                {" "}
-                <Home />{" "}
-              </ProtectedRoute>
+              <DefaultLayout>
+                <Home />
+              </DefaultLayout>
+            }
+          />
+          <Route
+            path="/colis"
+            element={
+              <DefaultLayout>
+                <Colis />
+              </DefaultLayout>
+            }
+          />
+          <Route
+            path="/devenir-partenaire"
+            element={
+              <DefaultLayout>
+                <PartnerApply />
+              </DefaultLayout>
             }
           />
           <Route
@@ -71,6 +114,15 @@ function App() {
                 {" "}
                 <BookNow />{" "}
               </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/login"
+            element={
+              <PublicRoute>
+                {" "}
+                <AdminLogin />{" "}
+              </PublicRoute>
             }
           />
           <Route
@@ -182,16 +234,16 @@ function App() {
             }
           />
           <Route
-            path="/company/login"
+            path="/company/finances"
             element={
-              <PublicRoute>
+              <ProtectedRoute>
                 {" "}
-                <CompanyLogin />{" "}
-              </PublicRoute>
+                <CompanyFinances />{" "}
+              </ProtectedRoute>
             }
           />
           <Route
-            path="/roleselector/company/login"
+            path="/company/login"
             element={
               <PublicRoute>
                 {" "}
@@ -206,15 +258,6 @@ function App() {
               <PublicRoute>
                 {" "}
                 <Register />{" "}
-              </PublicRoute>
-            }
-          />
-          <Route
-            path="/roleselector"
-            element={
-              <PublicRoute>
-                {" "}
-                <RoleSelector />{" "}
               </PublicRoute>
             }
           />

@@ -1,32 +1,26 @@
 import { useEffect, useState } from "react";
-import { Table, message, Button } from "antd";
+import { message } from "antd";
 import { useDispatch } from "react-redux";
-import { User, ShieldCheck, UserX, Unlock, Lock, Ban, Mail } from "lucide-react";
+import { User, Lock, Unlock } from "lucide-react";
 import { axiosInstance } from "../../helpers/axiosInstance";
 import { ShowLoading, HideLoading } from "../../redux/alertsSlice";
-import PageTitle from "../../components/PageTitle";
+
+const STATUS_BADGE = {
+  ACTIVE: { label: "Actif", className: "bg-brand-green/10 text-brand-green" },
+  SUSPENDED: { label: "Suspendu", className: "bg-red-50 text-red-600" },
+  PENDING_VERIFICATION: { label: "Non vérifié", className: "bg-saffron/15 text-saffron" },
+};
 
 function AdminUsers() {
   const dispatch = useDispatch();
   const [users, setUsers] = useState([]);
 
-  useEffect(() => {
-    getUsers();
-  }, []);
-
   const getUsers = async () => {
     try {
       dispatch(ShowLoading());
       const response = await axiosInstance.post("/api/admin/get-all-users");
-      if (response.data.success) {
-        const formatted = response.data.data.map((user) => ({
-          ...user,
-          key: user.id,
-        }));
-        setUsers(formatted);
-      } else {
-        message.error(response.data.message);
-      }
+      if (response.data.success) setUsers(response.data.data);
+      else message.error(response.data.message);
     } catch (error) {
       message.error(error.response?.data?.message || "Erreur serveur");
     } finally {
@@ -34,18 +28,18 @@ function AdminUsers() {
     }
   };
 
-  const updateUserPermissions = async (user, action) => {
+  useEffect(() => {
+    getUsers();
+  }, []);
+
+  const toggleSuspend = async (user) => {
+    const nextStatus = user.status === "SUSPENDED" ? "ACTIVE" : "SUSPENDED";
     try {
-      let payload = { ...user };
-      if (action === "make-admin") payload.role = "admin";
-      else if (action === "remove-admin") payload.role = "user";
-      else if (action === "block-user") payload.isBlocked = true;
-      else if (action === "unblock-user") payload.isBlocked = false;
-
       dispatch(ShowLoading());
-      const response = await axiosInstance.post("/api/admin/update-user-permissions", payload);
-      dispatch(HideLoading());
-
+      const response = await axiosInstance.post("/api/admin/update-user-permissions", {
+        id: user.id,
+        status: nextStatus,
+      });
       if (response.data.success) {
         message.success(response.data.message);
         getUsers();
@@ -53,137 +47,95 @@ function AdminUsers() {
         message.error(response.data.message);
       }
     } catch (error) {
-      dispatch(HideLoading());
       message.error(error.response?.data?.message || "Erreur lors de la mise à jour");
+    } finally {
+      dispatch(HideLoading());
     }
   };
-
-  const getStatusBadge = (isBlocked) => (
-    <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ${
-        isBlocked ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
-      }`}
-    >
-      {isBlocked ? <Ban size={12} /> : <User size={12} />}
-      {isBlocked ? "Bloqué" : "Actif"}
-    </span>
-  );
-
-  const getRoleBadge = (role) => {
-    const base = "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold ";
-    switch (role) {
-      case "admin":
-        return (
-          <span className={base + "bg-purple-100 text-purple-700"}>
-            <ShieldCheck size={12} />
-            Admin
-          </span>
-        );
-      case "company":
-        return (
-          <span className={base + "bg-yellow-100 text-yellow-700"}>
-            <User size={12} />
-            Compagnie
-          </span>
-        );
-      default:
-        return (
-          <span className={base + "bg-blue-100 text-blue-700"}>
-            <User size={12} />
-            Utilisateur
-          </span>
-        );
-    }
-  };
-
-  const columns = [
-    {
-      title: "Email",
-      dataIndex: "email",
-      render: (email) => (
-        <div className="flex items-center gap-2">
-          <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center">
-            <User className="w-4 h-4 text-white" />
-          </div>
-          <span className="truncate max-w-[180px] text-sm text-gray-800">{email}</span>
-        </div>
-      ),
-    },
-    {
-      title: "Nom",
-      dataIndex: "name",
-      render: (name) => (
-        <span className="text-sm text-gray-700">{name || <i className="text-gray-400">–</i>}</span>
-      ),
-    },
-    {
-      title: "Statut",
-      dataIndex: "isBlocked",
-      render: (isBlocked) => getStatusBadge(isBlocked),
-    },
-    {
-      title: "Rôle",
-      dataIndex: "role",
-      render: (role) => getRoleBadge(role),
-    },
-    {
-      title: "Actions",
-      render: (_, user) => (
-        <div className="flex gap-2 flex-wrap justify-center text-xs">
-          {user.isBlocked ? (
-            <Button
-              type="primary"
-              size="small"
-              className="bg-green-600 hover:bg-green-700 flex items-center gap-1"
-              onClick={() => updateUserPermissions(user, "unblock-user")}
-            >
-              <Unlock size={14} />
-              Débloquer
-            </Button>
-          ) : (
-            <Button
-              danger
-              size="small"
-              className="bg-red-600 hover:bg-red-700 flex items-center gap-1"
-              onClick={() => updateUserPermissions(user, "block-user")}
-            >
-              <Lock size={14} />
-              Bloquer
-            </Button>
-          )}
-
-          {user.role === "admin" ? (
-            <Button
-              size="small"
-              className="bg-gray-600 text-white hover:bg-gray-700 flex items-center gap-1"
-              onClick={() => updateUserPermissions(user, "remove-admin")}
-            >
-              <UserX size={14} />
-              Retirer Admin
-            </Button>
-          ) : (
-            <Button
-              size="small"
-              className="bg-blue-600 text-blue hover:bg-blue-700 flex items-center gap-1"
-              onClick={() => updateUserPermissions(user, "make-admin")}
-            >
-              <ShieldCheck size={14} />
-              Rendre Admin
-            </Button>
-          )}
-        </div>
-      ),
-    },
-  ];
 
   return (
-    <div className="min-h-screen p-2 pt-1 max-w-7xl mx-auto">
-      <Table
-        columns={columns}
-        dataSource={users}
-        pagination={{ pageSize: 5 }}
-        className="rounded-lg border border-gray-200  mt-2"
-      />
+    <div className="max-w-7xl mx-auto">
+      <div className="mb-6">
+        <h1 className="text-xl font-bold text-anthracite">Utilisateurs</h1>
+        <p className="text-sm text-anthracite/50 mt-0.5">Voyageurs inscrits sur la plateforme</p>
+      </div>
+
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-100 text-left text-xs text-anthracite/40 uppercase tracking-wider">
+              <th className="px-5 py-3 font-semibold">Utilisateur</th>
+              <th className="px-5 py-3 font-semibold">Téléphone</th>
+              <th className="px-5 py-3 font-semibold">Statut</th>
+              <th className="px-5 py-3 font-semibold">Inscription</th>
+              <th className="px-5 py-3 font-semibold">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.length === 0 ? (
+              <tr>
+                <td colSpan={5} className="px-5 py-12 text-center text-anthracite/40">
+                  Aucun utilisateur pour l&apos;instant.
+                </td>
+              </tr>
+            ) : (
+              users.map((u) => {
+                const badge = STATUS_BADGE[u.status] || STATUS_BADGE.ACTIVE;
+                return (
+                  <tr key={u.id} className="border-b border-gray-50 last:border-0">
+                    <td className="px-5 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-full bg-terracotta/10 flex items-center justify-center flex-shrink-0">
+                          <User size={14} className="text-terracotta" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-anthracite">
+                            {u.travelerProfile?.name || "—"}
+                          </p>
+                          <p className="text-xs text-anthracite/40">{u.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-3 text-anthracite/70">
+                      {u.travelerProfile?.phone || "—"}
+                    </td>
+                    <td className="px-5 py-3">
+                      <span
+                        className={`text-xs font-semibold px-2.5 py-1 rounded-full ${badge.className}`}
+                      >
+                        {badge.label}
+                      </span>
+                    </td>
+                    <td className="px-5 py-3 text-anthracite/50 text-xs">
+                      {new Date(u.createdAt).toLocaleDateString("fr-FR")}
+                    </td>
+                    <td className="px-5 py-3">
+                      <button
+                        onClick={() => toggleSuspend(u)}
+                        className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                          u.status === "SUSPENDED"
+                            ? "text-brand-green hover:bg-brand-green/10"
+                            : "text-red-600 hover:bg-red-50"
+                        }`}
+                      >
+                        {u.status === "SUSPENDED" ? (
+                          <>
+                            <Unlock size={13} /> Débloquer
+                          </>
+                        ) : (
+                          <>
+                            <Lock size={13} /> Bloquer
+                          </>
+                        )}
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

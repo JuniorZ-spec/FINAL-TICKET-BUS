@@ -1,52 +1,73 @@
 import React, { useEffect, useState } from "react";
-import { Eye, Edit2, Trash2, Filter, Search, MapPin, Star, Mail } from "lucide-react";
+import {
+  Search,
+  Building2,
+  FileText,
+  User as UserIcon,
+  Phone,
+  Mail,
+  Check,
+  X,
+  Ban,
+  RotateCcw,
+} from "lucide-react";
 import { axiosInstance } from "../../helpers/axiosInstance";
 import { useDispatch } from "react-redux";
 import { ShowLoading, HideLoading } from "../../redux/alertsSlice";
 import { message, Form, Input, Modal } from "antd";
-import { useNavigate } from "react-router-dom";
 
-export default function AdminCompanies() {
+const STATUS_BADGE = {
+  VERIFIED: { label: "Vérifiée", className: "bg-brand-green/10 text-brand-green" },
+  SUSPENDED: { label: "Suspendue", className: "bg-red-50 text-red-600" },
+  PENDING: { label: "En attente", className: "bg-saffron/15 text-saffron" },
+  REJECTED: { label: "Refusée", className: "bg-gray-100 text-gray-500" },
+};
+
+export default function AdminCompanys() {
   const dispatch = useDispatch();
-  const navigate = useNavigate();
+  const [tab, setTab] = useState("partners");
   const [companies, setCompanies] = useState([]);
+  const [pending, setPending] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const [showAddModal, setShowAddModal] = useState(false);
+  const [approveTarget, setApproveTarget] = useState(null);
   const [form] = Form.useForm();
+  const [approveForm] = Form.useForm();
 
   const getCompanies = async () => {
     try {
       dispatch(ShowLoading());
-      const token = localStorage.getItem("token");
-      const response = await axiosInstance.get("/api/admin/company-stats", {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (response.data.success) {
-        setCompanies(response.data.data);
-      } else {
-        message.error("Erreur lors du chargement des compagnies");
-      }
-    } catch (error) {
-      message.error("Erreur serveur");
+      const response = await axiosInstance.get("/api/admin/get-all-companies");
+      if (response.data.success) setCompanies(response.data.data);
+    } catch {
+      message.error("Erreur lors du chargement des compagnies");
     } finally {
       dispatch(HideLoading());
     }
   };
 
+  const getPending = async () => {
+    try {
+      const response = await axiosInstance.get("/api/admin/get-pending-companies");
+      if (response.data.success) setPending(response.data.data);
+    } catch {
+      message.error("Erreur lors du chargement des demandes");
+    }
+  };
+
+  useEffect(() => {
+    getCompanies();
+    getPending();
+  }, []);
+
   const createCompany = async () => {
     try {
       const values = await form.validateFields();
       dispatch(ShowLoading());
-
-      const response = await axiosInstance.post("/api/admin/create-company", {
-        email: values.email,
-        password: values.password,
-        companyName: values.companyName,
-        name: values.companyName, // ✅ ajoute ceci
-      });
-
+      const response = await axiosInstance.post("/api/admin/create-company", values);
       if (response.data.success) {
-        message.success(`Compagnie ${response.data.data.companyName} créée !`);
+        message.success(`Compagnie ${response.data.data.company.companyName} créée`);
         setShowAddModal(false);
         form.resetFields();
         await getCompanies();
@@ -54,121 +75,291 @@ export default function AdminCompanies() {
         message.warning(response.data.message);
       }
     } catch (error) {
-      const errorMessage =
-        error.response?.data?.message ||
-        error.response?.data?.debug ||
-        "Erreur lors de la création";
-      message.error(errorMessage);
+      message.error(error.response?.data?.message || "Erreur lors de la création");
     } finally {
       dispatch(HideLoading());
     }
   };
 
-  useEffect(() => {
-    getCompanies();
-  }, []);
+  const approveCompany = async () => {
+    try {
+      const values = await approveForm.validateFields();
+      dispatch(ShowLoading());
+      const response = await axiosInstance.post("/api/admin/approve-company", {
+        companyId: approveTarget.id,
+        password: values.password,
+      });
+      if (response.data.success) {
+        message.success("Compagnie validée");
+        setApproveTarget(null);
+        approveForm.resetFields();
+        await Promise.all([getCompanies(), getPending()]);
+      } else {
+        message.warning(response.data.message);
+      }
+    } catch (error) {
+      message.error(error.response?.data?.message || "Erreur lors de la validation");
+    } finally {
+      dispatch(HideLoading());
+    }
+  };
 
-  const filteredCompanies = Array.isArray(companies)
-    ? companies.filter((company) =>
-        company.companyName?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
-    : [];
+  const rejectCompany = async (companyId) => {
+    try {
+      dispatch(ShowLoading());
+      const response = await axiosInstance.post("/api/admin/reject-company", { companyId });
+      if (response.data.success) {
+        message.success("Demande refusée");
+        await getPending();
+      }
+    } catch {
+      message.error("Erreur lors du refus");
+    } finally {
+      dispatch(HideLoading());
+    }
+  };
+
+  const toggleSuspend = async (company) => {
+    const newStatus = company.status === "SUSPENDED" ? "VERIFIED" : "SUSPENDED";
+    try {
+      dispatch(ShowLoading());
+      const response = await axiosInstance.post("/api/admin/set-company-status", {
+        companyId: company.id,
+        status: newStatus,
+      });
+      if (response.data.success) {
+        message.success(newStatus === "SUSPENDED" ? "Compagnie suspendue" : "Compagnie réactivée");
+        await getCompanies();
+      }
+    } catch {
+      message.error("Erreur lors de la mise à jour");
+    } finally {
+      dispatch(HideLoading());
+    }
+  };
+
+  const filteredCompanies = companies.filter((c) => {
+    const matchesSearch = c.companyName?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter ? c.status === statusFilter : true;
+    return matchesSearch && matchesStatus;
+  });
 
   return (
-    <div
-      className="space-y-1.5 px-2 pt-1 lg:px-16  min-h-screen"
-      style={{ borderRadius: "8px", fontFamily: "Poppins, sans-serif" }}
-    >
-      {/* Top bar */}
-      <div className="flex  md:flex-row px-2">
-        <button
-          onClick={() => setShowAddModal(true)}
-          style={{ borderRadius: "8px", fontFamily: "Poppins, sans-serif" }}
-          className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors font-semibold shadow-md"
-          type="button"
-        >
-          + Nouvelle Compagnie
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        {filteredCompanies.length === 0 && (
-          <p className="text-center col-span-full text-gray-500">Aucune compagnie trouvée.</p>
-        )}
-
-        {filteredCompanies.map((company) => (
-          <div
-            key={company.companyId}
-            className="bg-white rounded-xl  border border-gray-200 p-4 hover:shadow-lg transition-shadow flex flex-col justify-between min-h-[12rem]"
+    <div className="max-w-7xl mx-auto">
+      {/* Onglets */}
+      <div className="flex items-center gap-8 border-b border-gray-200 mb-6">
+        {[
+          { key: "partners", label: "Compagnies partenaires" },
+          { key: "pending", label: "Demandes en attente", badge: pending.length },
+        ].map((t) => (
+          <button
+            key={t.key}
+            onClick={() => setTab(t.key)}
+            className={`pb-3 text-sm font-semibold flex items-center gap-2 border-b-2 -mb-px transition-colors ${
+              tab === t.key
+                ? "text-terracotta border-terracotta"
+                : "text-anthracite/50 border-transparent hover:text-anthracite"
+            }`}
           >
-            <div className="flex justify-between items-start mb-4">
-              <div className="flex items-center space-x-6">
-                <div className="w-14 h-14 bg-gray-100 rounded-lg flex items-center justify-center text-4xl select-none">
-                  🚌
-                </div>
-                <div>
-                  <h3 className="text-1xl font-bold text-gray-900 leading-tight">
-                    {company.companyName}
-                  </h3>
-                  <div className="flex items-center gap-2 text-gray-500 text-sm mt-1 truncate">
-                    <Mail className="w-4 h-4 flex-shrink-0" />
-                    <span className="truncate">{company.email}</span>
-                  </div>
-                  <span
-                    className={`inline-block mt-1 px-3 py-1 text-xs font-semibold rounded-full ${
-                      company.isBlocked ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"
-                    }`}
-                  >
-                    {company.isBlocked ? "Inactif" : "Actif"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="flex space-x-3 text-gray-500">
-                <button
-                  onClick={() => navigate(`/admin/companies/${company.companyId}`)}
-                  aria-label={`Voir détails de ${company.companyName}`}
-                  className="p-1 rounded hover:text-blue-600 transition-colors"
-                  type="button"
-                >
-                  <Eye className="w-5 h-5" />
-                </button>
-                <button
-                  aria-label={`Modifier ${company.companyName}`}
-                  className="p-1 rounded hover:text-green-600 transition-colors"
-                  type="button"
-                >
-                  <Edit2 className="w-5 h-5" />
-                </button>
-                <button
-                  aria-label={`Supprimer ${company.companyName}`}
-                  className="p-1 rounded hover:text-red-600 transition-colors"
-                  type="button"
-                >
-                  <Trash2 className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-gray-700 text-sm font-medium">
-              <div className="flex items-center gap-2 truncate">
-                <MapPin className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                Trajets :<span className="ml-2 font-semibold">{company.tripsCount ?? 0}</span>
-              </div>
-
-              <div className="flex items-center gap-2 col-span-2 truncate">
-                <Star className="w-5 h-5 text-gray-400 flex-shrink-0" />
-                Revenus :
-                <span className="ml-2 font-bold text-green-600 whitespace-nowrap">
-                  {company.totalRevenue?.toLocaleString("fr-FR")} FCFA
-                </span>
-              </div>
-            </div>
-          </div>
+            {t.label}
+            {t.badge > 0 && (
+              <span className="bg-terracotta text-white text-xs font-bold rounded-full w-5 h-5 flex items-center justify-center">
+                {t.badge}
+              </span>
+            )}
+          </button>
         ))}
       </div>
 
-      {/* MODAL CREATION */}
+      {tab === "partners" ? (
+        <>
+          <div className="flex items-center justify-between gap-4 mb-4 flex-wrap">
+            <div className="flex items-center gap-3 flex-1 min-w-[240px]">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-anthracite/30" />
+                <input
+                  type="text"
+                  placeholder="Rechercher par nom..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/30"
+                />
+              </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/30"
+              >
+                <option value="">Tous les statuts</option>
+                <option value="VERIFIED">Vérifiée</option>
+                <option value="SUSPENDED">Suspendue</option>
+              </select>
+              <span className="text-sm text-anthracite/40">
+                {filteredCompanies.length} compagnie(s)
+              </span>
+            </div>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="bg-terracotta text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-terracotta-dark transition-colors"
+            >
+              + Ajouter une compagnie
+            </button>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 text-left text-xs text-anthracite/40 uppercase tracking-wider">
+                  <th className="px-5 py-3 font-semibold">Compagnie</th>
+                  <th className="px-5 py-3 font-semibold">RCCM / IFU</th>
+                  <th className="px-5 py-3 font-semibold">Statut</th>
+                  <th className="px-5 py-3 font-semibold">Trajets</th>
+                  <th className="px-5 py-3 font-semibold">Revenus générés</th>
+                  <th className="px-5 py-3 font-semibold">Inscription</th>
+                  <th className="px-5 py-3 font-semibold">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredCompanies.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="px-5 py-12 text-center text-anthracite/40">
+                      Aucune compagnie trouvée.
+                    </td>
+                  </tr>
+                ) : (
+                  filteredCompanies.map((c) => {
+                    const badge = STATUS_BADGE[c.status] || STATUS_BADGE.VERIFIED;
+                    return (
+                      <tr key={c.id} className="border-b border-gray-50 last:border-0">
+                        <td className="px-5 py-3 font-semibold text-anthracite">{c.companyName}</td>
+                        <td className="px-5 py-3 text-anthracite/60 text-xs">
+                          {c.rccm || "—"}
+                          {c.ifu && <div>{c.ifu}</div>}
+                        </td>
+                        <td className="px-5 py-3">
+                          <span
+                            className={`text-xs font-semibold px-2.5 py-1 rounded-full ${badge.className}`}
+                          >
+                            {badge.label}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3 text-anthracite/70">{c.tripsCount}</td>
+                        <td className="px-5 py-3 text-anthracite/70">
+                          {c.revenue.toLocaleString("fr-FR")} FCFA
+                        </td>
+                        <td className="px-5 py-3 text-anthracite/50 text-xs">
+                          {new Date(c.createdAt).toLocaleDateString("fr-FR")}
+                        </td>
+                        <td className="px-5 py-3">
+                          <button
+                            onClick={() => toggleSuspend(c)}
+                            className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg transition-colors ${
+                              c.status === "SUSPENDED"
+                                ? "text-brand-green hover:bg-brand-green/10"
+                                : "text-red-600 hover:bg-red-50"
+                            }`}
+                          >
+                            {c.status === "SUSPENDED" ? (
+                              <>
+                                <RotateCcw size={13} /> Réactiver
+                              </>
+                            ) : (
+                              <>
+                                <Ban size={13} /> Suspendre
+                              </>
+                            )}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : (
+        <div className="space-y-4">
+          {pending.length === 0 ? (
+            <div className="bg-white border border-dashed border-gray-200 rounded-2xl py-16 text-center text-anthracite/40">
+              Aucune demande en attente.
+            </div>
+          ) : (
+            pending.map((c) => (
+              <div key={c.id} className="bg-white rounded-2xl border border-gray-200 p-5">
+                <div className="flex items-start justify-between flex-wrap gap-3 mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-11 h-11 rounded-xl bg-saffron/15 flex items-center justify-center flex-shrink-0">
+                      <Building2 className="w-5 h-5 text-saffron" />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-anthracite">{c.companyName}</h3>
+                      <p className="text-xs text-anthracite/40">
+                        Soumis le {new Date(c.requestedAt).toLocaleDateString("fr-FR")}
+                      </p>
+                    </div>
+                    <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-saffron/15 text-saffron">
+                      En attente
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setApproveTarget(c)}
+                      className="flex items-center gap-1.5 bg-brand-green text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-brand-green-dark transition-colors"
+                    >
+                      <Check size={15} /> Valider
+                    </button>
+                    <button
+                      onClick={() => rejectCompany(c.id)}
+                      className="flex items-center gap-1.5 bg-red-500 text-white text-sm font-semibold px-4 py-2 rounded-xl hover:bg-red-600 transition-colors"
+                    >
+                      <X size={15} /> Refuser
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 text-sm">
+                  <div>
+                    <p className="text-xs font-semibold text-anthracite/40 uppercase tracking-wider mb-2">
+                      Identité légale
+                    </p>
+                    <div className="flex items-center gap-2 text-anthracite/70 mb-1">
+                      <FileText size={14} className="text-anthracite/30" /> RCCM : {c.rccm || "—"}
+                    </div>
+                    <div className="flex items-center gap-2 text-anthracite/70">
+                      <FileText size={14} className="text-anthracite/30" /> IFU : {c.ifu || "—"}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-anthracite/40 uppercase tracking-wider mb-2">
+                      Contact
+                    </p>
+                    <div className="flex items-center gap-2 text-anthracite/70 mb-1">
+                      <UserIcon size={14} className="text-anthracite/30" /> {c.contactName}
+                    </div>
+                    <div className="flex items-center gap-2 text-anthracite/70 mb-1">
+                      <Phone size={14} className="text-anthracite/30" /> {c.contactPhone}
+                    </div>
+                    <div className="flex items-center gap-2 text-anthracite/70">
+                      <Mail size={14} className="text-anthracite/30" /> {c.email}
+                    </div>
+                  </div>
+                  {c.routesNote && (
+                    <div className="sm:col-span-2">
+                      <p className="text-xs font-semibold text-anthracite/40 uppercase tracking-wider mb-2">
+                        Lignes exploitées
+                      </p>
+                      <p className="text-anthracite/70">{c.routesNote}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* MODAL CREATION DIRECTE */}
       <Modal
         title="Créer une nouvelle compagnie"
         open={showAddModal}
@@ -179,23 +370,38 @@ export default function AdminCompanies() {
         centered
       >
         <Form layout="vertical" form={form}>
-          <Form.Item label="Nom de la compagnie" name="companyName">
+          <Form.Item label="Nom de la compagnie" name="companyName" rules={[{ required: true }]}>
             <Input placeholder="Nom de la compagnie" />
           </Form.Item>
-
-          <Form.Item label="Email" name="email">
+          <Form.Item label="Email" name="email" rules={[{ required: true }]}>
             <Input placeholder="Adresse email" />
           </Form.Item>
-
-          <Form.Item label="Adresse" name="address">
-            <Input placeholder="Adresse de la compagnie" />
+          <Form.Item label="Mot de passe" name="password" rules={[{ required: true }]}>
+            <Input.Password placeholder="Mot de passe" />
           </Form.Item>
+        </Form>
+      </Modal>
 
-          <Form.Item label="Téléphone" name="phone">
-            <Input placeholder="Numéro de téléphone" />
-          </Form.Item>
-
-          <Form.Item label="Mot de passe" name="password">
+      {/* MODAL VALIDATION DEMANDE */}
+      <Modal
+        title={`Valider ${approveTarget?.companyName || ""}`}
+        open={!!approveTarget}
+        onCancel={() => setApproveTarget(null)}
+        onOk={approveCompany}
+        okText="Créer le compte et valider"
+        cancelText="Annuler"
+        centered
+      >
+        <p className="text-sm text-anthracite/60 mb-4">
+          Définis un mot de passe initial pour le compte de {approveTarget?.email}. La compagnie
+          pourra le changer après sa première connexion.
+        </p>
+        <Form layout="vertical" form={approveForm}>
+          <Form.Item
+            label="Mot de passe initial"
+            name="password"
+            rules={[{ required: true, min: 8, message: "8 caractères minimum" }]}
+          >
             <Input.Password placeholder="Mot de passe" />
           </Form.Item>
         </Form>

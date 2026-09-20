@@ -4,6 +4,9 @@ import { useDispatch } from "react-redux";
 import { axiosInstance } from "../helpers/axiosInstance";
 import { useEffect, useState } from "react";
 import moment from "moment";
+import { MapPin, Wallet, Clock } from "lucide-react";
+
+const iconProps = { size: 15, className: "text-anthracite/30" };
 
 function TripForm({
   showTripForm,
@@ -16,6 +19,7 @@ function TripForm({
   const dispatch = useDispatch();
   const [stations, setStations] = useState([]);
   const [buses, setBuses] = useState([]);
+  const [lignes, setLignes] = useState([]);
   const [fromCity, setFromCity] = useState(selectedTrip?.from || "");
   const [toCity, setToCity] = useState(selectedTrip?.to || "");
 
@@ -23,9 +27,10 @@ function TripForm({
     const fetchData = async () => {
       try {
         dispatch(ShowLoading());
-        const [stationsResponse, busesResponse] = await Promise.all([
+        const [stationsResponse, busesResponse, lignesResponse] = await Promise.all([
           axiosInstance.get("/api/companys/get-company-stations"),
           axiosInstance.post("/api/buses/get-buses-company"),
+          axiosInstance.get("/api/companys/get-lignes"),
         ]);
 
         if (stationsResponse.data.success) setStations(stationsResponse.data.data);
@@ -33,6 +38,8 @@ function TripForm({
 
         if (busesResponse.data.success) setBuses(busesResponse.data.data);
         else message.error("Échec du chargement des bus");
+
+        if (lignesResponse.data.success) setLignes(lignesResponse.data.data);
       } catch {
         message.error("Erreur lors du chargement des données");
       } finally {
@@ -98,6 +105,7 @@ function TripForm({
           departureStationId: selectedTrip?.departureStationId,
           arrivalStationId: selectedTrip?.arrivalStationId,
           busId: selectedTrip?.busId,
+          ligneId: selectedTrip?.ligneId,
         }}
       >
         <Row gutter={[10, 10]}>
@@ -108,6 +116,7 @@ function TripForm({
               rules={[{ required: true, message: "Veuillez entrer la ville de départ" }]}
             >
               <Input
+                prefix={<MapPin {...iconProps} />}
                 placeholder="Entrez la ville de départ"
                 onChange={(e) => setFromCity(e.target.value)}
               />
@@ -120,6 +129,7 @@ function TripForm({
               rules={[{ required: true, message: "Veuillez entrer la ville d'arrivée" }]}
             >
               <Input
+                prefix={<MapPin {...iconProps} />}
                 placeholder="Entrez la ville d'arrivée"
                 onChange={(e) => setToCity(e.target.value)}
               />
@@ -194,7 +204,11 @@ function TripForm({
               name="price"
               rules={[{ required: true, message: "Veuillez entrer le prix" }]}
             >
-              <Input type="number" placeholder="Entrez le prix" />
+              <Input
+                prefix={<Wallet {...iconProps} />}
+                type="number"
+                placeholder="Entrez le prix"
+              />
             </Form.Item>
           </Col>
           <Col lg={12} xs={24}>
@@ -203,21 +217,39 @@ function TripForm({
               name="departureTime"
               rules={[{ required: true, message: "Veuillez entrer l'heure de départ" }]}
             >
-              <Input placeholder="Entrez l'heure de départ (ex: 08:30)" />
+              <Input
+                prefix={<Clock {...iconProps} />}
+                placeholder="Entrez l'heure de départ (ex: 08:30)"
+              />
             </Form.Item>
           </Col>
         </Row>
 
-        <div className="flex justify-end gap-2">
+        <Row gutter={[10, 10]}>
+          <Col lg={24} xs={24}>
+            <Form.Item label="Ligne tarifaire (optionnel)" name="ligneId">
+              <Select placeholder="Aucune — trajet indépendant" allowClear>
+                {lignes.map((ligne) => (
+                  <Select.Option key={ligne.id} value={ligne.id}>
+                    {ligne.from} → {ligne.to} ({ligne.code})
+                    {ligne.duration ? ` · ${ligne.duration}` : ""}
+                  </Select.Option>
+                ))}
+              </Select>
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <div className="flex justify-end gap-2 mt-2">
           <button
             type="button"
-            className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition"
+            className="bg-gray-100 text-anthracite/70 px-6 py-2 rounded-lg hover:bg-gray-200 transition"
             onClick={() => setShowTripForm(false)}
           >
             Annuler
           </button>
           <button
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+            className="bg-terracotta text-white px-6 py-2 rounded-lg hover:bg-terracotta-dark transition"
             type="submit"
           >
             Sauvegarder
