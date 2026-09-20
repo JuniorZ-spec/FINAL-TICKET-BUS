@@ -3,6 +3,9 @@ import { ShowLoading, HideLoading } from "../redux/alertsSlice";
 import { useDispatch } from "react-redux";
 import { axiosInstance } from "../helpers/axiosInstance";
 import { useEffect } from "react";
+import { Bus, Hash, Users } from "lucide-react";
+
+const iconProps = { size: 15, className: "text-anthracite/30" };
 
 function BusForm({
   showBusForm,
@@ -51,9 +54,9 @@ function BusForm({
       getData();
       setShowBusForm(false);
       setSelectedBus(null);
-      dispatch(HideLoading());
     } catch (error) {
-      message.error(error.message);
+      message.error(error.response?.data?.message || error.message);
+    } finally {
       dispatch(HideLoading());
     }
   };
@@ -70,7 +73,7 @@ function BusForm({
   return (
     <Modal
       width={600}
-      title={type === "add" ? "Add Bus" : "Update Bus"}
+      title={type === "add" ? "Ajouter un bus" : "Modifier le bus"}
       open={showBusForm}
       onCancel={handleCancel}
       footer={false}
@@ -78,24 +81,31 @@ function BusForm({
       <Form form={form} layout="vertical" onFinish={onFinish}>
         <Row gutter={[10, 10]}>
           <Col lg={24} xs={24}>
-            <Form.Item label="Name" name="name" rules={[{ required: true }]}>
-              <Input />
+            <Form.Item label="Nom" name="name" rules={[{ required: true, message: "Requis" }]}>
+              <Input prefix={<Bus {...iconProps} />} placeholder="Ex : Bus VIP 01" />
             </Form.Item>
           </Col>
 
           <Col lg={12} xs={24}>
-            <Form.Item label="Bus Number" name="number" rules={[{ required: true }]}>
-              <Input />
+            <Form.Item
+              label="Numéro d'immatriculation"
+              name="number"
+              rules={[{ required: true, message: "Requis" }]}
+            >
+              <Input prefix={<Hash {...iconProps} />} placeholder="Ex : BJ 1234 AB" />
             </Form.Item>
           </Col>
 
           <Col lg={12} xs={24}>
-            <Form.Item label="Capacity" name="capacity" rules={[{ required: true }]}>
-              <Input type="number" />
+            <Form.Item
+              label="Capacité"
+              name="capacity"
+              rules={[{ required: true, message: "Requis" }]}
+            >
+              <Input prefix={<Users {...iconProps} />} type="number" placeholder="Ex : 50" />
             </Form.Item>
           </Col>
 
-          {/* Services */}
           <Col lg={12} xs={24}>
             <Form.Item name={["services", "airConditioning"]} valuePropName="checked">
               <Checkbox>Climatisation</Checkbox>
@@ -109,9 +119,16 @@ function BusForm({
           </Col>
         </Row>
 
-        <div className="d-flex justify-content-end">
+        <div className="flex justify-end gap-2 mt-2">
           <button
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition"
+            type="button"
+            className="bg-gray-100 text-anthracite/70 px-6 py-2 rounded-lg hover:bg-gray-200 transition"
+            onClick={handleCancel}
+          >
+            Annuler
+          </button>
+          <button
+            className="bg-terracotta text-white px-6 py-2 rounded-lg hover:bg-terracotta-dark transition"
             type="submit"
           >
             Enregistrer

@@ -74,10 +74,11 @@ describe("authMiddleware", () => {
   // ─────────────────────────────────────────
 
   test("✅ appelle next() et remplit req.user si token valide", () => {
-    // On simule jwt.verify qui retourne un vrai payload
+    // On simule jwt.verify qui retourne un vrai payload — forme actuelle
+    // depuis la refonte auth (LOT 8) : userType + companyId, plus "role".
     jwt.verify.mockReturnValue({
       userId: "user-123",
-      role: "traveler",
+      userType: "TRAVELER",
     });
 
     const { req, res, next } = mockReqResNext("Bearer tokenvalide");
@@ -90,7 +91,8 @@ describe("authMiddleware", () => {
     // req.user doit être rempli correctement
     expect(req.user).toEqual({
       userId: "user-123",
-      role: "traveler",
+      userType: "TRAVELER",
+      companyId: null,
     });
 
     // Aucune erreur retournée

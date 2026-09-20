@@ -1,7 +1,6 @@
-import "./resourses/global.css";
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
+import { axiosInstance } from "./helpers/axiosInstance";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Home from "./pages/Home";
@@ -25,8 +24,10 @@ import CompanyHome from "./pages/Company/CompanyHome";
 import CompanyBuses from "./pages/Company/CompanyBuses";
 import CompanyTrips from "./pages/Company/CompanyTrips";
 import CompanyLogin from "./pages/Company/CompanyLogin";
+import PartnerApply from "./pages/Company/PartnerApply";
 import CompanyBookings from "./pages/Company/CompanyBookings";
 import CompanyStations from "./pages/Company/CompanyStations";
+import CompanyFinances from "./pages/Company/CompanyFinances";
 import BookNow from "./pages/BookNow";
 import Bookings from "./pages/Bookings";
 import Profile from "./pages/Profile";
@@ -35,7 +36,7 @@ import ResetPassword from "./pages/ResetPassword";
 // Assure-toi d'importer la page AdminTrajets
 
 function App() {
-  const { loading } = useSelector((state) => state.alerts);
+  const { loadingCount } = useSelector((state) => state.alerts);
   const dispatch = useDispatch();
 
   // Restaure la session (si un token existe) sans bloquer l'affichage des pages publiques
@@ -43,21 +44,25 @@ function App() {
     const token = localStorage.getItem("token");
     if (!token) return;
 
-    axios
-      .get("/api/users/profile", { headers: { Authorization: `Bearer ${token}` } })
+    axiosInstance
+      .get("/api/users/profile")
       .then((response) => {
         if (response.data.success) {
           dispatch(SetUser(normalizeUser(response.data.data)));
         } else {
           localStorage.removeItem("token");
+          localStorage.removeItem("refreshToken");
         }
       })
-      .catch(() => localStorage.removeItem("token"));
+      .catch(() => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("refreshToken");
+      });
   }, []);
 
   return (
     <div>
-      {loading && <Loader />}
+      {loadingCount > 0 && <Loader />}
       <BrowserRouter>
         <Routes>
           <Route
@@ -73,6 +78,14 @@ function App() {
             element={
               <DefaultLayout>
                 <Colis />
+              </DefaultLayout>
+            }
+          />
+          <Route
+            path="/devenir-partenaire"
+            element={
+              <DefaultLayout>
+                <PartnerApply />
               </DefaultLayout>
             }
           />
@@ -217,6 +230,15 @@ function App() {
               <ProtectedRoute>
                 {" "}
                 <CompanyBookings />{" "}
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/company/finances"
+            element={
+              <ProtectedRoute>
+                {" "}
+                <CompanyFinances />{" "}
               </ProtectedRoute>
             }
           />

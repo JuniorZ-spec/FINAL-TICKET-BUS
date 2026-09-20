@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Form, message } from "antd";
 import { useNavigate, Link } from "react-router-dom";
-import axios from "axios";
+import { axiosInstance } from "../../helpers/axiosInstance";
 import { useDispatch } from "react-redux";
 import { ShowLoading, HideLoading } from "../../redux/alertsSlice";
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Bus } from "lucide-react";
@@ -15,7 +15,7 @@ function CompanyLogin() {
   const onFinish = async (values) => {
     try {
       dispatch(ShowLoading());
-      const response = await axios.post("/api/users/login-company", values);
+      const response = await axiosInstance.post("/api/users/login-company", values);
       dispatch(HideLoading());
 
       if (response.data.success) {
@@ -23,7 +23,6 @@ function CompanyLogin() {
         const { accessToken, refreshToken } = response.data.data;
         localStorage.setItem("token", accessToken);
         localStorage.setItem("refreshToken", refreshToken);
-        localStorage.setItem("role", "company");
         navigate("/company");
       } else {
         message.error(response.data.message);
@@ -67,6 +66,7 @@ function CompanyLogin() {
                 <Mail className="absolute z-10 left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-anthracite/30" />
                 <Form.Item
                   name="email"
+                  initialValue=""
                   rules={[{ required: true, message: "Veuillez entrer votre email" }]}
                   className="!mb-0"
                 >
@@ -88,6 +88,7 @@ function CompanyLogin() {
                 <Lock className="absolute z-10 left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-anthracite/30" />
                 <Form.Item
                   name="password"
+                  initialValue=""
                   rules={[{ required: true, message: "Veuillez entrer votre mot de passe" }]}
                   className="!mb-0"
                 >
@@ -131,7 +132,10 @@ function CompanyLogin() {
             </button>
 
             <p className="text-center text-sm text-anthracite/50">
-              Pas encore partenaire ? Contactez l&apos;équipe AliGo.
+              Pas encore partenaire ?{" "}
+              <Link to="/devenir-partenaire" className="text-terracotta font-semibold">
+                Devenez partenaire AliGo
+              </Link>
             </p>
           </Form>
         </div>

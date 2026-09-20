@@ -15,7 +15,7 @@ const mockReqResNext = (user) => {
 describe("requireRole", () => {
   test("❌ retourne 401 si req.user est absent", () => {
     const { req, res, next } = mockReqResNext(undefined);
-    const middleware = requireRole("admin");
+    const middleware = requireRole("ADMIN");
 
     middleware(req, res, next);
 
@@ -30,8 +30,8 @@ describe("requireRole", () => {
 
   test("❌ retourne 403 si le rôle ne correspond pas", () => {
     // Un traveler essaie d'accéder à une route admin
-    const { req, res, next } = mockReqResNext({ userId: "123", role: "traveler" });
-    const middleware = requireRole("admin");
+    const { req, res, next } = mockReqResNext({ userId: "123", userType: "TRAVELER" });
+    const middleware = requireRole("ADMIN");
 
     middleware(req, res, next);
 
@@ -45,8 +45,8 @@ describe("requireRole", () => {
   });
 
   test("✅ appelle next() si le rôle est admin et requis admin", () => {
-    const { req, res, next } = mockReqResNext({ userId: "123", role: "admin" });
-    const middleware = requireRole("admin");
+    const { req, res, next } = mockReqResNext({ userId: "123", userType: "ADMIN" });
+    const middleware = requireRole("ADMIN");
 
     middleware(req, res, next);
 
@@ -55,9 +55,9 @@ describe("requireRole", () => {
   });
 
   test("✅ appelle next() si plusieurs rôles acceptés", () => {
-    // La route accepte admin OU company
-    const { req, res, next } = mockReqResNext({ userId: "456", role: "company" });
-    const middleware = requireRole("admin", "company");
+    // La route accepte ADMIN OU COMPANY_MEMBER
+    const { req, res, next } = mockReqResNext({ userId: "456", userType: "COMPANY_MEMBER" });
+    const middleware = requireRole("ADMIN", "COMPANY_MEMBER");
 
     middleware(req, res, next);
 

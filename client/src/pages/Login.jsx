@@ -2,7 +2,7 @@ import React from "react";
 import { ArrowLeft, Mail, Lock, Users } from "lucide-react";
 import { Form, message } from "antd";
 import { useNavigate, Link } from "react-router-dom";
-import axios from "axios";
+import { axiosInstance } from "../helpers/axiosInstance";
 import { useDispatch } from "react-redux";
 import { ShowLoading, HideLoading } from "../redux/alertsSlice";
 import WaxPattern from "../components/WaxPattern";
@@ -14,7 +14,7 @@ function Login() {
   const onFinish = async (values) => {
     try {
       dispatch(ShowLoading());
-      const response = await axios.post("/api/users/login", values);
+      const response = await axiosInstance.post("/api/users/login", values);
       dispatch(HideLoading());
 
       if (response.data.success) {
@@ -64,6 +64,7 @@ function Login() {
               <Mail className="absolute z-10 left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-anthracite/30" />
               <Form.Item
                 name="email"
+                initialValue=""
                 rules={[{ required: true, message: "Veuillez entrer votre email" }]}
                 className="!mb-0"
               >
@@ -80,6 +81,7 @@ function Login() {
               <Lock className="absolute z-10 left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-anthracite/30" />
               <Form.Item
                 name="password"
+                initialValue=""
                 rules={[{ required: true, message: "Veuillez entrer votre mot de passe" }]}
                 className="!mb-0"
               >

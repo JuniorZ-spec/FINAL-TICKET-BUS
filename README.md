@@ -14,6 +14,7 @@ Plateforme de réservation de billets de bus multi-tenant, conçue pour la gesti
 - [Exécution avec Docker Compose](#exécution-avec-docker-compose)
 - [API disponibles](#api-disponibles)
 - [CI / GitHub Actions](#ci--github-actions)
+- [Migration cloud AWS (projet DevOps)](#migration-cloud-aws-projet-devops)
 - [Roadmap et points à améliorer](#roadmap-et-points-à-améliorer)
 - [Contribuer](#contribuer)
 
@@ -186,6 +187,68 @@ Il exécute :
 - audit de sécurité
 - build Docker backend et frontend
 
+## Migration cloud AWS (projet DevOps)
+
+En parallèle du développement produit, ce repo sert de **projet vitrine
+DevOps** : migration d'un déploiement EC2/SSH manuel vers une architecture
+AWS managée, pilotée en Terraform + GitHub Actions OIDC. Aucune nouvelle
+fonctionnalité métier — l'objectif est l'infrastructure elle-même.
+
+**Contrainte** : ~60$ de crédits AWS → infra **éphémère**. Tout se
+développe en local (`docker compose`), AWS ne sert que pour des sessions de
+démo (`terraform apply` → démo → `terraform destroy`). Pas de NAT Gateway,
+rien ne tourne en permanence sauf le frontend (S3/CloudFront), le state
+Terraform et les repos ECR (stockage seul).
+
+### Architecture cible
+
+| Composant | Service AWS |
+| --- | --- |
+| CI/CD | GitHub Actions, OIDC (pas de clé AWS statique), scan Trivy, push ECR |
+| Frontend | S3 + CloudFront |
+| API | ECS Fargate + ALB, secrets en SSM Parameter Store |
+| Base de données | RDS PostgreSQL |
+| Réservation de siège | SQS FIFO + Lambda + DLQ (garantie zéro double réservation) |
+
+### Ce qui est fait et vérifié sur AWS réel
+
+L'essentiel de l'infrastructure est écrit, appliqué et testé contre un
+vrai compte AWS, pas seulement planifié :
+
+- **State Terraform + OIDC** (`terraform/bootstrap`) : backend S3 versionné
+  et chiffré, lock DynamoDB, provider OIDC GitHub (aucune clé d'accès
+  statique), role de déploiement CI construit en moindre privilège
+  incrémental.
+- **Réseau** (`terraform/network`) : VPC, subnets publics, security groups
+  en chaîne (`alb → ecs/lambda → rds`), appliqué et vérifié.
+- **CI/CD** (`.github/workflows/`, `terraform/ecr`) : scan Trivy bloquant,
+  images ECR immutables (pas de tag `latest`), push automatique après CI.
+- **API** (`terraform/backend`) : ECS Fargate (Spot) derrière un ALB, RDS
+  PostgreSQL, secrets en SSM Parameter Store — **vérifié bout-en-bout en
+  conditions réelles** : `curl http://<alb-dns>/health` → `200`, migration
+  Prisma et seed exécutés via une tâche ECS one-off.
+- **Réservation asynchrone** (`backend/controllers/bookingController.ts`,
+  `lambda/booking-processor`, `terraform/async`) : SQS FIFO + Lambda + DLQ,
+  code et infrastructure écrits, déploiement final en cours.
+
+Le frontend (S3 + CloudFront) est prêt côté code ; sa mise en ligne
+attend une vérification de compte côté AWS Support (restriction
+indépendante du projet, appliquée à tout nouveau compte créant des
+ressources CloudFront).
+
+### Décisions techniques notables
+
+- **Bug corrigé, pas juste déplacé** : l'ancienne logique de réservation avait une race condition (lecture optimiste puis écriture, sans contrainte DB). La contrainte `@@unique([tripId, seat])` sur `BookingSeat` est ce qui garantit réellement l'absence de doublon, indépendamment de l'ordre de traitement — voir `backend/prisma/schema.prisma` et `lambda/booking-processor/index.ts`.
+- IAM du role de déploiement CI construit **incrémentalement** (un statement ajouté par service introduit), visible commit par commit dans `terraform/bootstrap/iam-policy.tf`.
+- RDS en subnet public + security group verrouillé (pas de NAT Gateway) : compromis budget assumé et documenté, pas un oubli.
+- Images ECR immutables, pas de tag `latest` — chaque déploiement référence un sha de commit exact.
+
+### Documentation détaillée
+
+- [`docs/decisions.md`](docs/decisions.md) — journal des choix techniques et résultats chiffrés, phase par phase (bugs rencontrés inclus)
+- [`docs/demo-runbook.md`](docs/demo-runbook.md) — séquence exacte pour lancer/vérifier/détruire une session de démo
+- [`terraform/README.md`](terraform/README.md) — structure des modules Terraform
+
 ## Roadmap et points à améliorer
 
 - refonte complète de l'authentification et des rôles utilisateur
@@ -207,3 +270,7 @@ Ce projet utilise des conventions Git classiques :
 Avant chaque commit, le dépôt exécute Husky + lint-staged pour formatter le code avec Prettier et corriger les erreurs ESLint.
 
 Pour plus de détails sur la contribution, consulter `CONTRIBUTING.md`.
+
+## Notes
+
+- Vérification de connectivité Git (push de test) effectuée le 2026-07-22.

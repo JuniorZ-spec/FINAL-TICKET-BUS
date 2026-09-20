@@ -11,6 +11,7 @@ router.get("/get-dashboard-stats", ...companyAuth, companyController.getDashboar
 router.get("/get-all-companies", authMiddleware, companyController.getAllCompanies);
 router.get("/get-company-stations", ...companyAuth, companyController.getCompanyStations);
 router.get("/get-bookings-per-day", ...companyAuth, companyController.getBookingsPerDay);
+router.get("/get-finance-stats", ...companyAuth, companyController.getFinanceStats);
 router.get("/get-lignes", ...companyAuth, companyController.getLignes);
 router.post("/create-ligne", ...companyAuth, companyController.createLigne);
 router.put("/update-ligne/:id", ...companyAuth, companyController.updateLigne);

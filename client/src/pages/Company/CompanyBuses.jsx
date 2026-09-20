@@ -1,37 +1,28 @@
 import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import { message, Table, Button, Popconfirm } from "antd";
-import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
-import { Bus, User, Settings, Users } from "lucide-react";
+import { useDispatch } from "react-redux";
+import { message, Popconfirm } from "antd";
+import { Bus, Users, Pencil, Trash2, Wind, Wifi } from "lucide-react";
 
 import { ShowLoading, HideLoading } from "../../redux/alertsSlice";
 import { axiosInstance } from "../../helpers/axiosInstance";
 import BusForm from "../../components/BusForm";
-import PageTitle from "../../components/PageTitle";
 
 function CompanyBuses() {
   const dispatch = useDispatch();
   const [showBusForm, setShowBusForm] = useState(false);
   const [buses, setBuses] = useState([]);
   const [selectedBus, setSelectedBus] = useState(null);
-  const { user } = useSelector((state) => state.users);
 
   const getBuses = async () => {
     try {
       dispatch(ShowLoading());
-      const response = await axiosInstance.post("/api/buses/get-buses-company", {
-        role: "company",
-      });
-      dispatch(HideLoading());
-
-      if (response.data.success) {
-        setBuses(response.data.data);
-      } else {
-        message.error(response.data.message || "Aucun bus trouvé");
-      }
+      const response = await axiosInstance.post("/api/buses/get-buses-company");
+      if (response.data.success) setBuses(response.data.data);
+      else message.error(response.data.message || "Aucun bus trouvé");
     } catch (error) {
-      dispatch(HideLoading());
       message.error(error.response?.data?.message || "Erreur de chargement");
+    } finally {
+      dispatch(HideLoading());
     }
   };
 
@@ -39,7 +30,6 @@ function CompanyBuses() {
     try {
       dispatch(ShowLoading());
       const response = await axiosInstance.post("/api/buses/delete-bus", { _id: id });
-      dispatch(HideLoading());
       if (response.data.success) {
         message.success("Bus supprimé");
         getBuses();
@@ -47,124 +37,132 @@ function CompanyBuses() {
         message.error(response.data.message || "Échec de la suppression");
       }
     } catch (error) {
-      dispatch(HideLoading());
       message.error(error.response?.data?.message || "Erreur lors de la suppression");
+    } finally {
+      dispatch(HideLoading());
     }
   };
-
-  const columns = [
-    {
-      title: "Bus",
-      render: (_, record) => (
-        <div className="space-y-1 text-sm">
-          <div className="flex items-center gap-2">
-            <Bus className="w-4 h-4 text-blue-600" />
-            <span className="font-semibold text-gray-800">{record.name || "N/A"}</span>
-          </div>
-          <div className="flex items-center gap-2 text-gray-600 text-xs">
-            <span className="text-gray-500">N°:</span> {record.number || "—"}
-          </div>
-        </div>
-      ),
-    },
-    {
-      title: "Capacité",
-      dataIndex: "capacity",
-      render: (capacity) => (
-        <div className="flex items-center gap-2 text-sm text-gray-700">
-          <Users className="w-4 h-4 text-indigo-500" />
-          <span>{capacity || "N/A"} places</span>
-        </div>
-      ),
-    },
-    {
-      title: "Services",
-      key: "services",
-      render: (_, record) => (
-        <div className="flex gap-2 flex-wrap">
-          {record.airConditioning && (
-            <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-semibold">
-              Climatisation
-            </span>
-          )}
-          {record.wifi && (
-            <span className="bg-green-100 text-green-800 px-2 py-1 rounded text-xs font-semibold">
-              Wi-Fi
-            </span>
-          )}
-          {!record.airConditioning && !record.wifi && (
-            <span className="text-gray-400 text-xs">Aucun</span>
-          )}
-        </div>
-      ),
-    },
-    {
-      title: "Actions",
-      key: "actions",
-      render: (_, record) => (
-        <div className="flex gap-2">
-          <Popconfirm
-            title="Supprimer ce bus ?"
-            onConfirm={() => deleteBus(record.id)}
-            okText="Oui"
-            cancelText="Non"
-          >
-            <Button type="default" danger icon={<DeleteOutlined />} className="hover:bg-red-50" />
-          </Popconfirm>
-          <Button
-            type="default"
-            icon={<EditOutlined />}
-            onClick={() => {
-              setSelectedBus(record);
-              setShowBusForm(true);
-            }}
-            className="border-blue-500 text-blue-500 hover:bg-blue-50"
-          />
-        </div>
-      ),
-    },
-  ];
 
   useEffect(() => {
     getBuses();
   }, []);
 
   return (
-    <div className="min-h-screen pt-2 py-6 px-4 bg-gray-100">
-      <div className="  rounded-lg  w-full max-w-6xl mx-auto">
-        <div className="flex justify-between items-center mb-4">
-          <Button
-            type="primary"
-            icon={<PlusOutlined />}
-            onClick={() => {
-              setSelectedBus(null);
-              setShowBusForm(true);
-            }}
-            className="bg-blue-600 text-white mx-6 px-3 py-3 rounded-lg hover:bg-blue-700 transition-colors font-bold shadow-lg"
-          >
-            Ajouter Bus
-          </Button>
+    <div className="max-w-7xl mx-auto">
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-xl font-bold text-anthracite">Bus</h1>
+          <p className="text-sm text-anthracite/50 mt-0.5">Gestion de la flotte de véhicules</p>
         </div>
-
-        <Table
-          className="rounded-lg border border-gray-200"
-          columns={columns}
-          dataSource={buses}
-          rowKey="id"
-          pagination={{ pageSize: 5, showSizeChanger: true }}
-        />
-
-        {showBusForm && (
-          <BusForm
-            showBusForm={showBusForm}
-            setShowBusForm={setShowBusForm}
-            selectedBus={selectedBus}
-            setSelectedBus={setSelectedBus}
-            type={selectedBus ? "update" : "add"}
-            getData={getBuses}
-          />
-        )}
+        <button
+          onClick={() => {
+            setSelectedBus(null);
+            setShowBusForm(true);
+          }}
+          className="bg-terracotta text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-terracotta-dark transition-colors"
+        >
+          + Ajouter un bus
+        </button>
       </div>
+
+      <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-100 text-left text-xs text-anthracite/40 uppercase tracking-wider">
+              <th className="px-5 py-3 font-semibold">Bus</th>
+              <th className="px-5 py-3 font-semibold">Capacité</th>
+              <th className="px-5 py-3 font-semibold">Services</th>
+              <th className="px-5 py-3 font-semibold">Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {buses.length === 0 ? (
+              <tr>
+                <td colSpan={4} className="px-5 py-12 text-center text-anthracite/40">
+                  Aucun bus pour l&apos;instant.
+                </td>
+              </tr>
+            ) : (
+              buses.map((bus) => (
+                <tr key={bus.id} className="border-b border-gray-50 last:border-0">
+                  <td className="px-5 py-3">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-lg bg-terracotta/10 flex items-center justify-center shrink-0">
+                        <Bus size={15} className="text-terracotta" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-anthracite">{bus.name || "—"}</p>
+                        <p className="text-xs text-anthracite/40 font-mono">{bus.number || "—"}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-5 py-3 text-anthracite/70">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Users size={14} className="text-anthracite/30" />
+                      {bus.capacity || "—"} places
+                    </span>
+                  </td>
+                  <td className="px-5 py-3">
+                    <div className="flex gap-1.5 flex-wrap">
+                      {bus.airConditioning && (
+                        <span className="inline-flex items-center gap-1 bg-brand-green/10 text-brand-green px-2 py-1 rounded-lg text-xs font-semibold">
+                          <Wind size={11} /> Clim
+                        </span>
+                      )}
+                      {bus.wifi && (
+                        <span className="inline-flex items-center gap-1 bg-saffron/15 text-saffron px-2 py-1 rounded-lg text-xs font-semibold">
+                          <Wifi size={11} /> Wi-Fi
+                        </span>
+                      )}
+                      {!bus.airConditioning && !bus.wifi && (
+                        <span className="text-xs text-anthracite/30">Aucun</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-5 py-3">
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => {
+                          setSelectedBus(bus);
+                          setShowBusForm(true);
+                        }}
+                        className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-brand-green hover:bg-brand-green/10 transition-colors"
+                        title="Modifier"
+                      >
+                        <Pencil size={14} />
+                      </button>
+                      <Popconfirm
+                        title="Supprimer ce bus ?"
+                        okText="Supprimer"
+                        cancelText="Annuler"
+                        onConfirm={() => deleteBus(bus.id)}
+                      >
+                        <button
+                          className="w-8 h-8 rounded-lg inline-flex items-center justify-center text-red-500 hover:bg-red-50 transition-colors"
+                          title="Supprimer"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </Popconfirm>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {showBusForm && (
+        <BusForm
+          showBusForm={showBusForm}
+          setShowBusForm={setShowBusForm}
+          selectedBus={selectedBus}
+          setSelectedBus={setSelectedBus}
+          type={selectedBus ? "update" : "add"}
+          getData={getBuses}
+        />
+      )}
     </div>
   );
 }

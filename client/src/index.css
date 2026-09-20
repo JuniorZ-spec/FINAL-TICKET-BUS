@@ -12,11 +12,6 @@
   --font-sans: "Poppins", sans-serif;
 }
 
-:root {
-  --primary: rgb(0, 0, 0);
-  --secondary: rgb(0, 183, 255);
-}
-
 body {
   @apply font-sans;
 }
@@ -27,4 +22,80 @@ input,
 select,
 textarea {
   font-family: inherit;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float-soft {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes shimmer-bar {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 200% 50%;
+  }
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Révélation au scroll : masqué par défaut, un hook IntersectionObserver
+   ajoute .is-visible quand l'élément entre dans le viewport. */
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(24px);
+}
+.reveal-on-scroll.is-visible {
+  animation: fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.animate-float-soft {
+  animation: float-soft 4s ease-in-out infinite;
+}
+
+.animate-shimmer-bar {
+  background-size: 200% 100%;
+  animation: shimmer-bar 3s linear infinite;
+}
+
+.animate-pop-in {
+  animation: pop-in 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-on-scroll,
+  .reveal-on-scroll.is-visible,
+  .animate-float-soft,
+  .animate-shimmer-bar,
+  .animate-pop-in {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
 }

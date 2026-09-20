@@ -67,8 +67,14 @@ exports.getAllCompanies = async (req, res) => {
     const data = await Promise.all(
       companies.map(async (company) => {
         const [trips, bookings] = await Promise.all([
-          prisma.trip.findMany({ where: { companyId: company.id }, select: { id: true, price: true } }),
-          prisma.booking.findMany({ where: { companyId: company.id }, select: { tripId: true, seats: true } }),
+          prisma.trip.findMany({
+            where: { companyId: company.id },
+            select: { id: true, price: true },
+          }),
+          prisma.booking.findMany({
+            where: { companyId: company.id },
+            select: { tripId: true, seats: true },
+          }),
         ]);
         const revenue = bookings.reduce((sum, b) => {
           const trip = trips.find((t) => t.id === b.tripId);
@@ -110,9 +116,7 @@ exports.approveCompany = async (req, res) => {
   try {
     const { companyId, password } = req.body;
     if (!companyId || !password) {
-      return res
-        .status(400)
-        .json({ success: false, message: "companyId et mot de passe requis" });
+      return res.status(400).json({ success: false, message: "companyId et mot de passe requis" });
     }
 
     const company = await prisma.company.findUnique({ where: { id: companyId } });

@@ -15,6 +15,7 @@ const companysRoute = require("./routes/companysRoute");
 const adminRoute = require("./routes/adminRoute");
 const tripsRoute = require("./routes/tripsRoute");
 const stationsRoute = require("./routes/stationsRoute");
+const reviewsRoute = require("./routes/reviewsRoute");
 
 app.use("/api/users", usersRoute);
 app.use("/api/buses", busesRoute);
@@ -23,6 +24,7 @@ app.use("/api/companys", companysRoute);
 app.use("/api/admin", adminRoute);
 app.use("/api/trips", tripsRoute);
 app.use("/api/stations", stationsRoute);
+app.use("/api/reviews", reviewsRoute);
 
 app.get("/health", (_req, res) => res.json({ status: "ok" }));
 

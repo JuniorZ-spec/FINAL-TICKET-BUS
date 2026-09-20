@@ -3,7 +3,15 @@ import { axiosInstance } from "../../helpers/axiosInstance";
 import { useDispatch } from "react-redux";
 import { ShowLoading, HideLoading } from "../../redux/alertsSlice";
 import { message } from "antd";
-import { Ticket, Wallet, Bus, Package, TrendingUp, TrendingDown, ChevronRight } from "lucide-react";
+import {
+  Ticket,
+  Wallet,
+  Bus,
+  Package2,
+  TrendingUp,
+  TrendingDown,
+  ChevronRight,
+} from "lucide-react";
 import {
   AreaChart,
   Area,
@@ -25,6 +33,7 @@ function CompanyHome() {
     ticketsToday: 0,
     revenueToday: 0,
     avgFillRate: 0,
+    parcelsInCirculation: 0,
   });
   const [bookingData, setBookingData] = useState([]);
   const [period, setPeriod] = useState(7);
@@ -119,9 +128,9 @@ function CompanyHome() {
       delta: null,
     },
     {
-      title: "Bus disponibles",
-      value: stats.busesCount,
-      icon: Package,
+      title: "Colis en circulation",
+      value: stats.parcelsInCirculation,
+      icon: Package2,
       color: "terracotta",
       delta: null,
     },
