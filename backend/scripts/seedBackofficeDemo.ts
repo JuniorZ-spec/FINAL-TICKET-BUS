@@ -185,12 +185,25 @@ async function main() {
     const booking = completedBookings[i * 3];
     if (!booking) continue;
     await prisma.review.create({
-      data: { rating, content, userId: booking.userId, companyId: booking.companyId, bookingId: booking.id },
+      data: {
+        rating,
+        content,
+        userId: booking.userId,
+        companyId: booking.companyId,
+        bookingId: booking.id,
+      },
     });
   }
 
   // Colis
-  const statuses = ["REGISTERED", "IN_TRANSIT", "IN_TRANSIT", "AWAITING_PICKUP", "DELIVERED", "DELIVERED"];
+  const statuses = [
+    "REGISTERED",
+    "IN_TRANSIT",
+    "IN_TRANSIT",
+    "AWAITING_PICKUP",
+    "DELIVERED",
+    "DELIVERED",
+  ];
   for (let i = 0; i < 8; i++) {
     const company = companies[i % companies.length];
     const [from, to] = ROUTES[i % ROUTES.length];
@@ -210,8 +223,18 @@ async function main() {
 
   // Litiges
   const disputes = [
-    ["Remboursement non reçu après annulation", "Le client a annulé mais n'a pas été remboursé.", "HIGH", "OPEN"],
-    ["Bus arrivé avec 3h de retard", "Retard important non signalé aux voyageurs.", "NORMAL", "OPEN"],
+    [
+      "Remboursement non reçu après annulation",
+      "Le client a annulé mais n'a pas été remboursé.",
+      "HIGH",
+      "OPEN",
+    ],
+    [
+      "Bus arrivé avec 3h de retard",
+      "Retard important non signalé aux voyageurs.",
+      "NORMAL",
+      "OPEN",
+    ],
     ["Bagage endommagé", "Valise abîmée pendant le transport.", "LOW", "OPEN"],
     ["Double débit Mobile Money", "Débité deux fois pour la même réservation.", "HIGH", "RESOLVED"],
   ];
@@ -234,8 +257,20 @@ async function main() {
 
   // Demandes de partenariat en attente (visibles dans l'admin)
   const pending = [
-    ["Atlantique Express", "contact@atlantique-express-demo.com", "Marc Kpodo", "+229 95 11 22 33", "Cotonou - Lomé, Cotonou - Ouidah"],
-    ["Nord Voyages", "contact@nord-voyages-demo.com", "Salamatou Idrissou", "+229 95 44 55 66", "Parakou - Natitingou, Parakou - Djougou"],
+    [
+      "Atlantique Express",
+      "contact@atlantique-express-demo.com",
+      "Marc Kpodo",
+      "+229 95 11 22 33",
+      "Cotonou - Lomé, Cotonou - Ouidah",
+    ],
+    [
+      "Nord Voyages",
+      "contact@nord-voyages-demo.com",
+      "Salamatou Idrissou",
+      "+229 95 44 55 66",
+      "Parakou - Natitingou, Parakou - Djougou",
+    ],
   ];
   for (const [companyName, email, contactName, contactPhone, routesNote] of pending) {
     await prisma.company.create({

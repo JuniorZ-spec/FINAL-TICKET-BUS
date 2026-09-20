@@ -185,7 +185,9 @@ exports.cancelBooking = async (req, res) => {
     }
 
     if (booking.status === "CANCELLED") {
-      return res.status(400).json({ success: false, message: "Cette réservation est déjà annulée" });
+      return res
+        .status(400)
+        .json({ success: false, message: "Cette réservation est déjà annulée" });
     }
 
     // Libère réellement le(s) siège(s) : sans ça, la ligne BookingSeat

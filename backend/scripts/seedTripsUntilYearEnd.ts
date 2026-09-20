@@ -35,9 +35,14 @@ async function main() {
   const station = (companyId, city) =>
     stations.find((s) => s.companyId === companyId && s.city === city);
 
-  const existing = await prisma.trip.findMany({ select: { companyId: true, from: true, to: true, date: true, departureTime: true } });
+  const existing = await prisma.trip.findMany({
+    select: { companyId: true, from: true, to: true, date: true, departureTime: true },
+  });
   const seen = new Set(
-    existing.map((t) => `${t.companyId}|${t.from}|${t.to}|${t.date.toISOString().slice(0, 10)}|${t.departureTime}`)
+    existing.map(
+      (t) =>
+        `${t.companyId}|${t.from}|${t.to}|${t.date.toISOString().slice(0, 10)}|${t.departureTime}`
+    )
   );
 
   const rows = [];

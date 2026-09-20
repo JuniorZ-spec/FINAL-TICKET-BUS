@@ -70,7 +70,13 @@ async function seedDemoData() {
   });
 
   console.log("Compagnie :", company.id);
-  console.log("Trajet :", trip.id, "(" + trip.from + " -> " + trip.to + ", capacite bus:", bus.capacity, "places)");
+  console.log(
+    "Trajet :",
+    trip.id,
+    "(" + trip.from + " -> " + trip.to + ", capacite bus:",
+    bus.capacity,
+    "places)"
+  );
   console.log("Utilisateur de test :", testUser.email);
 
   await prisma.$disconnect();

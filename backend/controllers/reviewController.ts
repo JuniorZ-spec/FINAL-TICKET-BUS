@@ -38,7 +38,13 @@ exports.createReview = async (req, res) => {
 
     const [hours, minutes] = booking.trip.departureTime.split(":").map(Number);
     const base = new Date(booking.trip.date);
-    const tripDateTime = new Date(base.getFullYear(), base.getMonth(), base.getDate(), hours, minutes);
+    const tripDateTime = new Date(
+      base.getFullYear(),
+      base.getMonth(),
+      base.getDate(),
+      hours,
+      minutes
+    );
     if (tripDateTime > new Date()) {
       return res
         .status(400)

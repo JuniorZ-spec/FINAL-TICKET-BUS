@@ -70,7 +70,10 @@ exports.getDashboardStats = async (req, res) => {
 
     const [bookings, trips, busesCount, stationsCount, parcelsInCirculation] = await Promise.all([
       prisma.booking.findMany({ where: { companyId } }),
-      prisma.trip.findMany({ where: { companyId }, select: { id: true, price: true, busId: true } }),
+      prisma.trip.findMany({
+        where: { companyId },
+        select: { id: true, price: true, busId: true },
+      }),
       prisma.bus.count({ where: { companyId } }),
       prisma.station.count({ where: { companyId } }),
       prisma.parcel.count({
