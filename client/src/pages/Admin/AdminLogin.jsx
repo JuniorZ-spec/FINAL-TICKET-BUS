@@ -2,7 +2,7 @@ import React from "react";
 import { Form, message } from "antd";
 import { Mail, Lock, ShieldCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { axiosInstance } from "../../helpers/axiosInstance";
 import { useDispatch } from "react-redux";
 import { ShowLoading, HideLoading } from "../../redux/alertsSlice";
 
@@ -13,7 +13,7 @@ function AdminLogin() {
   const onFinish = async (values) => {
     try {
       dispatch(ShowLoading());
-      const response = await axios.post("/api/users/login-admin", values);
+      const response = await axiosInstance.post("/api/users/login-admin", values);
       dispatch(HideLoading());
 
       if (response.data.success) {

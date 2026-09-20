@@ -2,7 +2,7 @@ import React from "react";
 import { ArrowLeft, Mail, Lock, Users } from "lucide-react";
 import { Form, message } from "antd";
 import { useNavigate, Link } from "react-router-dom";
-import axios from "axios";
+import { axiosInstance } from "../helpers/axiosInstance";
 import { useDispatch } from "react-redux";
 import { ShowLoading, HideLoading } from "../redux/alertsSlice";
 import WaxPattern from "../components/WaxPattern";
@@ -14,7 +14,7 @@ function Login() {
   const onFinish = async (values) => {
     try {
       dispatch(ShowLoading());
-      const response = await axios.post("/api/users/login", values);
+      const response = await axiosInstance.post("/api/users/login", values);
       dispatch(HideLoading());
 
       if (response.data.success) {
