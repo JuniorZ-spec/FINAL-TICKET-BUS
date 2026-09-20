@@ -26,6 +26,7 @@ import {
   Search,
   Bell,
   PackageSearch,
+  Wallet,
 } from "lucide-react";
 
 function DefaultLayout({ children }) {
@@ -52,16 +53,19 @@ function DefaultLayout({ children }) {
         return <Home {...props} />;
       case "Réservations":
         return <FileText {...props} />;
-      case "Profile":
+      case "Profil":
         return <User {...props} />;
       case "Déconnexion":
         return <LogOut {...props} />;
       case "Trajets":
+      case "Lignes et départs":
         return <LayoutDashboard {...props} />;
       case "Bus":
         return <Bus {...props} />;
       case "Gares":
         return <MapPin {...props} />;
+      case "Finances":
+        return <Wallet {...props} />;
       case "Utilisateurs":
         return <Users {...props} />;
       case "Compagnies":
@@ -76,7 +80,7 @@ function DefaultLayout({ children }) {
   const userMenu = [
     { name: "Accueil", path: "/" },
     { name: "Réservations", path: "/bookings" },
-    { name: "Profile", path: "/profile" },
+    { name: "Profil", path: "/profile" },
     { name: "Déconnexion", path: "/logout" },
   ];
 
@@ -92,10 +96,11 @@ function DefaultLayout({ children }) {
 
   const companyMenu = [
     { name: "Tableau de Bord", path: "/company", group: "Principal" },
-    { name: "Trajets", path: "/company/trips", group: "Gestion" },
+    { name: "Lignes et départs", path: "/company/trips", group: "Gestion" },
     { name: "Bus", path: "/company/buses", group: "Gestion" },
     { name: "Gares", path: "/company/stations", group: "Gestion" },
     { name: "Réservations", path: "/company/bookings", group: "Gestion" },
+    { name: "Finances", path: "/company/finances", group: "Gestion" },
     { name: "Déconnexion", path: "/logout" },
   ];
 
@@ -109,6 +114,7 @@ function DefaultLayout({ children }) {
     user?.role === "admin" ? adminMenu : user?.role === "company" ? companyMenu : userMenu;
 
   const activeRoute = window.location.pathname;
+  const isBackofficeRoute = activeRoute.startsWith("/admin") || activeRoute.startsWith("/company");
   const isCompany = user?.role === "company";
   const companyInitials = (user?.companyName || "AL")
     .split(" ")
@@ -125,7 +131,9 @@ function DefaultLayout({ children }) {
   ];
 
   // ✨ PARTIE 'USER' (+ invité) : NAVBAR FLOTTANTE SUR IMAGE DANS LA PAGE D'ACCUEIL
-  return isGuest || user?.role === "user" ? (
+  // Le chrome dépend de la route (publique vs back-office), pas seulement du rôle :
+  // un membre compagnie/admin qui visite "/" doit voir la même page publique qu'un voyageur.
+  return !isBackofficeRoute ? (
     <div className="min-h-screen flex flex-col bg-offwhite">
       <header className="bg-white/95 backdrop-blur-sm border-b border-gray-100 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -206,6 +214,7 @@ function DefaultLayout({ children }) {
                 <button
                   onClick={() => {
                     localStorage.removeItem("token");
+                    localStorage.removeItem("refreshToken");
                     navigate("/login");
                   }}
                   className="flex items-center space-x-2 bg-terracotta text-white px-5 py-2.5 rounded-full text-base hover:bg-terracotta-dark transition-colors"
@@ -373,6 +382,7 @@ function DefaultLayout({ children }) {
               <button
                 onClick={() => {
                   localStorage.removeItem("token");
+                  localStorage.removeItem("refreshToken");
                   navigate("/login");
                 }}
                 className="text-white/30 hover:text-white/70 transition-colors shrink-0"
@@ -387,6 +397,7 @@ function DefaultLayout({ children }) {
             <button
               onClick={() => {
                 localStorage.removeItem("token");
+                localStorage.removeItem("refreshToken");
                 navigate("/login");
               }}
               className={`w-full flex items-center space-x-3 px-4 py-2 text-red-600 hover:bg-red-100 rounded-lg transition-colors ${

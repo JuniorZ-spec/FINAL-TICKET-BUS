@@ -20,7 +20,6 @@ function AdminLogin() {
         const { accessToken, refreshToken } = response.data.data;
         localStorage.setItem("token", accessToken);
         localStorage.setItem("refreshToken", refreshToken);
-        localStorage.setItem("role", "admin");
         window.location.href = "/admin";
       } else {
         message.error("Identifiants incorrects");
@@ -47,6 +46,7 @@ function AdminLogin() {
             <Mail className="absolute z-10 left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-anthracite/30" />
             <Form.Item
               name="email"
+              initialValue=""
               rules={[{ required: true, message: "Email requis" }]}
               className="!mb-0"
             >
@@ -63,6 +63,7 @@ function AdminLogin() {
             <Lock className="absolute z-10 left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-anthracite/30" />
             <Form.Item
               name="password"
+              initialValue=""
               rules={[{ required: true, message: "Mot de passe requis" }]}
               className="!mb-0"
             >

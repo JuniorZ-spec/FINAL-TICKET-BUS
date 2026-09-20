@@ -68,11 +68,14 @@ exports.getDashboardStats = async (req, res) => {
   try {
     const companyId = req.user.companyId;
 
-    const [bookings, trips, busesCount, stationsCount] = await Promise.all([
+    const [bookings, trips, busesCount, stationsCount, parcelsInCirculation] = await Promise.all([
       prisma.booking.findMany({ where: { companyId } }),
       prisma.trip.findMany({ where: { companyId }, select: { id: true, price: true, busId: true } }),
       prisma.bus.count({ where: { companyId } }),
       prisma.station.count({ where: { companyId } }),
+      prisma.parcel.count({
+        where: { companyId, status: { not: "DELIVERED" } },
+      }),
     ]);
 
     const totalRevenue = bookings.reduce((sum, b) => {
@@ -119,6 +122,7 @@ exports.getDashboardStats = async (req, res) => {
         ticketsToday,
         revenueToday,
         avgFillRate,
+        parcelsInCirculation,
       },
     });
   } catch (error) {
@@ -285,6 +289,73 @@ exports.getBookingsPerDay = async (req, res) => {
     });
 
     res.status(200).json({ success: true, data: result });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+};
+
+const COMMISSION_RATE = 0.02;
+
+exports.getFinanceStats = async (req, res) => {
+  try {
+    const companyId = req.user.companyId;
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+    const [bookings, trips] = await Promise.all([
+      prisma.booking.findMany({
+        where: { companyId, status: { not: "CANCELLED" }, createdAt: { gte: monthStart } },
+        select: { seats: true, tripId: true, channel: true },
+      }),
+      prisma.trip.findMany({
+        where: { companyId },
+        select: { id: true, price: true, from: true, to: true },
+      }),
+    ]);
+
+    const tripById = new Map<string, { id: string; price: number; from: string; to: string }>(
+      trips.map((t) => [t.id, t])
+    );
+
+    let grossRevenue = 0;
+    let ticketsIssued = 0;
+    const revenueByLigne = new Map<string, number>();
+    const revenueByChannel: Record<string, number> = { ONLINE: 0, COUNTER: 0 };
+
+    bookings.forEach((b) => {
+      const trip = tripById.get(b.tripId);
+      if (!trip) return;
+      const amount = trip.price * b.seats.length;
+      grossRevenue += amount;
+      ticketsIssued += b.seats.length;
+
+      const ligneKey = `${trip.from} → ${trip.to}`;
+      revenueByLigne.set(ligneKey, (revenueByLigne.get(ligneKey) || 0) + amount);
+
+      revenueByChannel[b.channel] = (revenueByChannel[b.channel] || 0) + amount;
+    });
+
+    const commission = Math.round(grossRevenue * COMMISSION_RATE);
+    const netPayout = grossRevenue - commission;
+
+    res.status(200).json({
+      success: true,
+      data: {
+        periodLabel: monthStart.toLocaleDateString("fr-FR", { month: "long", year: "numeric" }),
+        grossRevenue,
+        commissionRate: COMMISSION_RATE,
+        commission,
+        netPayout,
+        ticketsIssued,
+        revenueByLigne: Array.from(revenueByLigne, ([ligne, revenue]) => ({ ligne, revenue })).sort(
+          (a, b) => b.revenue - a.revenue
+        ),
+        revenueByChannel: [
+          { channel: "ONLINE", label: "En ligne", revenue: revenueByChannel.ONLINE },
+          { channel: "COUNTER", label: "Guichet", revenue: revenueByChannel.COUNTER },
+        ],
+      },
+    });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

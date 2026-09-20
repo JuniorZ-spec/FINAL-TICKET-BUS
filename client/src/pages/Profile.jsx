@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { message } from "antd";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { axiosInstance } from "../helpers/axiosInstance";
 
 function Profile() {
   const { user } = useSelector((state) => state.users); // Récupérer l'utilisateur connecté depuis Redux
@@ -22,7 +22,7 @@ function Profile() {
 
     try {
       setLoading(true);
-      const response = await axios.post("/api/users/change-password", {
+      const response = await axiosInstance.post("/api/users/change-password", {
         currentPassword,
         newPassword,
       });

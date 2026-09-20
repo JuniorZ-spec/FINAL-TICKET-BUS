@@ -19,6 +19,7 @@ function TripForm({
   const dispatch = useDispatch();
   const [stations, setStations] = useState([]);
   const [buses, setBuses] = useState([]);
+  const [lignes, setLignes] = useState([]);
   const [fromCity, setFromCity] = useState(selectedTrip?.from || "");
   const [toCity, setToCity] = useState(selectedTrip?.to || "");
 
@@ -26,9 +27,10 @@ function TripForm({
     const fetchData = async () => {
       try {
         dispatch(ShowLoading());
-        const [stationsResponse, busesResponse] = await Promise.all([
+        const [stationsResponse, busesResponse, lignesResponse] = await Promise.all([
           axiosInstance.get("/api/companys/get-company-stations"),
           axiosInstance.post("/api/buses/get-buses-company"),
+          axiosInstance.get("/api/companys/get-lignes"),
         ]);
 
         if (stationsResponse.data.success) setStations(stationsResponse.data.data);
@@ -36,6 +38,8 @@ function TripForm({
 
         if (busesResponse.data.success) setBuses(busesResponse.data.data);
         else message.error("Échec du chargement des bus");
+
+        if (lignesResponse.data.success) setLignes(lignesResponse.data.data);
       } catch {
         message.error("Erreur lors du chargement des données");
       } finally {
@@ -101,6 +105,7 @@ function TripForm({
           departureStationId: selectedTrip?.departureStationId,
           arrivalStationId: selectedTrip?.arrivalStationId,
           busId: selectedTrip?.busId,
+          ligneId: selectedTrip?.ligneId,
         }}
       >
         <Row gutter={[10, 10]}>
@@ -216,6 +221,21 @@ function TripForm({
                 prefix={<Clock {...iconProps} />}
                 placeholder="Entrez l'heure de départ (ex: 08:30)"
               />
+            </Form.Item>
+          </Col>
+        </Row>
+
+        <Row gutter={[10, 10]}>
+          <Col lg={24} xs={24}>
+            <Form.Item label="Ligne tarifaire (optionnel)" name="ligneId">
+              <Select placeholder="Aucune — trajet indépendant" allowClear>
+                {lignes.map((ligne) => (
+                  <Select.Option key={ligne.id} value={ligne.id}>
+                    {ligne.from} → {ligne.to} ({ligne.code})
+                    {ligne.duration ? ` · ${ligne.duration}` : ""}
+                  </Select.Option>
+                ))}
+              </Select>
             </Form.Item>
           </Col>
         </Row>

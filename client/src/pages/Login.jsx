@@ -64,6 +64,7 @@ function Login() {
               <Mail className="absolute z-10 left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-anthracite/30" />
               <Form.Item
                 name="email"
+                initialValue=""
                 rules={[{ required: true, message: "Veuillez entrer votre email" }]}
                 className="!mb-0"
               >
@@ -80,6 +81,7 @@ function Login() {
               <Lock className="absolute z-10 left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-anthracite/30" />
               <Form.Item
                 name="password"
+                initialValue=""
                 rules={[{ required: true, message: "Veuillez entrer votre mot de passe" }]}
                 className="!mb-0"
               >

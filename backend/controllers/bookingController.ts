@@ -158,18 +158,50 @@ exports.getBookingRequestStatus = async (req, res) => {
   }
 };
 
+// Seuls trois profils peuvent annuler une réservation : le voyageur qui l'a
+// faite, un membre de la compagnie concernée, ou un admin — jamais un
+// utilisateur authentifié quelconque (faille corrigée le 2026-09-17,
+// signalée lors de l'audit du projet).
 exports.cancelBooking = async (req, res) => {
   try {
     const { bookingId } = req.body;
+    const { userId, userType, companyId } = req.user;
 
-    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { bookingRequest: { include: { bookingSeats: true } } },
+    });
     if (!booking) {
       return res.status(404).json({ success: false, message: "Réservation non trouvée" });
     }
 
-    await prisma.booking.update({
-      where: { id: bookingId },
-      data: { status: "CANCELLED" },
+    const isOwner = booking.userId === userId;
+    const isCompanyStaff = userType === "COMPANY_MEMBER" && booking.companyId === companyId;
+    const isAdmin = userType === "ADMIN";
+    if (!isOwner && !isCompanyStaff && !isAdmin) {
+      return res
+        .status(403)
+        .json({ success: false, message: "Vous n'êtes pas autorisé à annuler cette réservation" });
+    }
+
+    if (booking.status === "CANCELLED") {
+      return res.status(400).json({ success: false, message: "Cette réservation est déjà annulée" });
+    }
+
+    // Libère réellement le(s) siège(s) : sans ça, la ligne BookingSeat
+    // (contrainte @@unique([tripId, seat])) reste en base pour toujours et
+    // personne ne peut plus jamais réserver ce siège sur ce trajet, même si
+    // l'interface le montre comme libre à nouveau.
+    await prisma.$transaction(async (tx) => {
+      if (booking.bookingRequest) {
+        await tx.bookingSeat.deleteMany({
+          where: { bookingRequestId: booking.bookingRequest.id },
+        });
+      }
+      await tx.booking.update({
+        where: { id: bookingId },
+        data: { status: "CANCELLED" },
+      });
     });
 
     res.status(200).json({ success: true, message: "Réservation annulée avec succès" });
@@ -190,6 +222,7 @@ exports.getUserBookings = async (req, res) => {
             company: { select: { companyName: true } },
           },
         },
+        review: { select: { id: true } },
       },
     });
     res.status(200).json({ success: true, data: bookings });

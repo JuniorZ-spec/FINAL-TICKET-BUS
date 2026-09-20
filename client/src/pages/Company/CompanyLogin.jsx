@@ -23,7 +23,6 @@ function CompanyLogin() {
         const { accessToken, refreshToken } = response.data.data;
         localStorage.setItem("token", accessToken);
         localStorage.setItem("refreshToken", refreshToken);
-        localStorage.setItem("role", "company");
         navigate("/company");
       } else {
         message.error(response.data.message);
@@ -67,6 +66,7 @@ function CompanyLogin() {
                 <Mail className="absolute z-10 left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-anthracite/30" />
                 <Form.Item
                   name="email"
+                  initialValue=""
                   rules={[{ required: true, message: "Veuillez entrer votre email" }]}
                   className="!mb-0"
                 >
@@ -88,6 +88,7 @@ function CompanyLogin() {
                 <Lock className="absolute z-10 left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-anthracite/30" />
                 <Form.Item
                   name="password"
+                  initialValue=""
                   rules={[{ required: true, message: "Veuillez entrer votre mot de passe" }]}
                   className="!mb-0"
                 >
@@ -131,7 +132,10 @@ function CompanyLogin() {
             </button>
 
             <p className="text-center text-sm text-anthracite/50">
-              Pas encore partenaire ? Contactez l&apos;équipe AliGo.
+              Pas encore partenaire ?{" "}
+              <Link to="/devenir-partenaire" className="text-terracotta font-semibold">
+                Devenez partenaire AliGo
+              </Link>
             </p>
           </Form>
         </div>

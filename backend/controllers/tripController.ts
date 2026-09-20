@@ -14,12 +14,22 @@ const tripInclude = {
   departureStation: true,
   arrivalStation: true,
   company: { select: { id: true, companyName: true } },
+  ligne: { select: { duration: true, code: true } },
 };
 
 exports.addTrip = async (req, res) => {
   try {
-    const { from, to, departureStationId, arrivalStationId, busId, date, departureTime, price } =
-      req.body;
+    const {
+      from,
+      to,
+      departureStationId,
+      arrivalStationId,
+      busId,
+      date,
+      departureTime,
+      price,
+      ligneId,
+    } = req.body;
 
     const trip = await prisma.trip.create({
       data: {
@@ -32,6 +42,7 @@ exports.addTrip = async (req, res) => {
         busId,
         departureStationId,
         arrivalStationId,
+        ligneId: ligneId || null,
       },
     });
 
@@ -90,8 +101,17 @@ exports.getTripById = async (req, res) => {
 
 exports.updateTrip = async (req, res) => {
   try {
-    const { from, to, departureStationId, arrivalStationId, busId, date, departureTime, price } =
-      req.body;
+    const {
+      from,
+      to,
+      departureStationId,
+      arrivalStationId,
+      busId,
+      date,
+      departureTime,
+      price,
+      ligneId,
+    } = req.body;
 
     const trip = await prisma.trip.update({
       where: { id: req.params.id },
@@ -104,6 +124,7 @@ exports.updateTrip = async (req, res) => {
         busId,
         departureStationId,
         arrivalStationId,
+        ligneId: ligneId !== undefined ? ligneId || null : undefined,
       },
     });
 

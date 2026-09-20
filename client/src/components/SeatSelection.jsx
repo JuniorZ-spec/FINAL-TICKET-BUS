@@ -1,162 +1,92 @@
-import React, { useEffect } from "react";
-import { UserOutlined } from "@ant-design/icons";
+import { User } from "lucide-react";
+
+const LETTERS = ["A", "B", "C", "D"];
 
 const SeatSelection = ({ selectedSeats = [], setSelectedSeats, bus }) => {
-  const rows = 10;
-  const seatsPerSide = 2;
-
-  useEffect(() => {
-    const styleId = "seat-hover-style";
-    if (!document.getElementById(styleId)) {
-      const hoverStyle = document.createElement("style");
-      hoverStyle.id = styleId;
-      hoverStyle.innerHTML = `
-        .seat-hover:hover {
-          transform: scale(1.05);
-          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.20);
-        }
-      `;
-      document.head.appendChild(hoverStyle);
-    }
-  }, []);
-
-  console.log("Bus reçu dans SeatSelection :", bus);
-
   if (!bus) {
     return (
-      <div style={{ textAlign: "center", padding: "20px", color: "gray" }}>
-        Chargement des données du bus...
+      <div className="text-center py-10 text-anthracite/40 text-sm">
+        Chargement du plan des sièges...
       </div>
     );
   }
 
+  const capacity = bus.capacity || 40;
   const bookedSeats = (bus.seatsBooked || []).map((seat) => seat.toString());
 
   const selectOrUnselectSeats = (seatId) => {
-    const seatStr = seatId.toString();
-    if (bookedSeats.includes(seatStr)) return;
-
+    if (bookedSeats.includes(seatId)) return;
     setSelectedSeats((prev) =>
-      prev.includes(seatStr) ? prev.filter((s) => s !== seatStr) : [...prev, seatStr]
+      prev.includes(seatId) ? prev.filter((s) => s !== seatId) : [...prev, seatId]
     );
   };
 
-  const renderRow = (rowIndex) => {
-    const leftSeats = [];
-    const rightSeats = [];
-
-    const renderSeat = (seatId) => {
-      const seatStr = seatId.toString();
-      const isBooked = bookedSeats.includes(seatStr);
-      const isSelected = selectedSeats.includes(seatStr);
-
-      const iconColor = isBooked || isSelected ? "white" : "grey";
-      const textColor = isBooked || isSelected ? "white" : "black";
-
-      return (
-        <div
-          key={seatId}
-          className="seat-hover"
-          title={`Siège ${seatId}`}
-          style={{
-            ...styles.seat,
-            ...(isBooked ? styles.booked : isSelected ? styles.selected : styles.available),
-          }}
-          onClick={isBooked ? undefined : () => selectOrUnselectSeats(seatId)}
-        >
-          <UserOutlined style={{ color: iconColor }} />
-          <span style={{ fontSize: "11px", marginTop: "1px", color: textColor }}>{seatId}</span>
-        </div>
-      );
-    };
-
-    for (let i = 0; i < seatsPerSide; i++) {
-      const leftSeatId = rowIndex * seatsPerSide * 2 + i + 1;
-      const rightSeatId = rowIndex * seatsPerSide * 2 + i + seatsPerSide + 1;
-
-      leftSeats.push(renderSeat(leftSeatId));
-      rightSeats.push(renderSeat(rightSeatId));
-    }
+  const renderSeat = (seatId) => {
+    const isBooked = bookedSeats.includes(seatId);
+    const isSelected = selectedSeats.includes(seatId);
 
     return (
-      <div key={rowIndex} style={styles.row}>
-        <div style={styles.side}>{leftSeats}</div>
-        <div style={styles.aisle}></div>
-        <div style={styles.side}>{rightSeats}</div>
-      </div>
+      <button
+        key={seatId}
+        type="button"
+        title={`Siège ${seatId}`}
+        disabled={isBooked}
+        onClick={() => selectOrUnselectSeats(seatId)}
+        className={`w-11 h-11 rounded-t-lg border flex flex-col items-center justify-center text-[11px] font-semibold transition-all ${
+          isBooked
+            ? "bg-gray-200 border-gray-300 text-gray-400 cursor-not-allowed"
+            : isSelected
+              ? "bg-terracotta border-terracotta text-white scale-105 shadow-sm"
+              : "bg-white border-gray-200 text-anthracite/60 hover:border-terracotta/40 hover:scale-105"
+        }`}
+      >
+        <User size={13} />
+        <span className="mt-0.5">{seatId}</span>
+      </button>
     );
   };
 
+  const rows = [];
+  let remaining = capacity;
+  let rowNum = 1;
+  while (remaining > 0) {
+    const count = Math.min(4, remaining);
+    const labels = LETTERS.slice(0, count).map((l) => `${l}${rowNum}`);
+    rows.push({ rowNum, left: labels.slice(0, 2), right: labels.slice(2, 4) });
+    remaining -= count;
+    rowNum++;
+  }
+
   return (
-    <div style={styles.container}>
-      <div style={styles.layout}>{[...Array(rows)].map((_, index) => renderRow(index))}</div>
+    <div className="w-full">
+      <div className="flex items-center justify-center gap-6 mb-5 text-xs text-anthracite/60">
+        <span className="flex items-center gap-1.5">
+          <span className="w-3.5 h-3.5 rounded border border-gray-300 bg-white inline-block" />{" "}
+          Libre
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3.5 h-3.5 rounded bg-terracotta inline-block" /> Sélectionné
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3.5 h-3.5 rounded bg-gray-300 inline-block" /> Occupé
+        </span>
+      </div>
+
+      <div className="bg-offwhite rounded-2xl border border-gray-100 p-6 w-fit mx-auto">
+        <div className="flex flex-col items-center gap-1.5">
+          {rows.map((row) => (
+            <div key={row.rowNum} className="flex items-center gap-3">
+              <div className="flex gap-1.5">{row.left.map(renderSeat)}</div>
+              <span className="w-5 text-center text-[10px] text-anthracite/30 font-mono">
+                {row.rowNum}
+              </span>
+              <div className="flex gap-1.5">{row.right.map(renderSeat)}</div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
-};
-
-const styles = {
-  container: {
-    textAlign: "center",
-    fontFamily: "Arial, sans-serif",
-    padding: "10px",
-    color: "white",
-  },
-  layout: {
-    overflow: "hidden",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    padding: "10px",
-    border: "1px solid #ddd",
-    width: "fit-content",
-    margin: "0 auto",
-    backgroundColor: "white",
-  },
-  row: {
-    display: "flex",
-    marginBottom: "5px",
-  },
-  side: {
-    display: "flex",
-    gap: "10px",
-  },
-  aisle: {
-    width: "75px",
-  },
-  seat: {
-    width: "50px",
-    height: "35px",
-    border: "1px solid gray",
-    borderTopLeftRadius: "8px",
-    borderTopRightRadius: "8px",
-    backgroundColor: "transparent",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: "12px",
-    cursor: "pointer",
-    fontWeight: "bold",
-    transition: "transform 0.3s ease-in-out, box-shadow 0.3s ease-in-out",
-    userSelect: "none",
-  },
-  available: {
-    backgroundColor: "rgba(0, 180, 255, 0.2)",
-    borderColor: "#007bff",
-    color: "#007bff",
-  },
-  selected: {
-    backgroundColor: "#52c41a",
-    borderColor: "grey",
-    color: "white",
-  },
-  booked: {
-    backgroundColor: "#dc3545",
-    borderColor: "#a71d2a",
-    color: "white",
-    cursor: "not-allowed",
-    pointerEvents: "none",
-  },
 };
 
 export default SeatSelection;

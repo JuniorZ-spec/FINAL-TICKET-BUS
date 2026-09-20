@@ -21,7 +21,7 @@ const columns = [
     title: "Compagnies",
     links: [
       { label: "Espace compagnie", path: "/company/login" },
-      { label: "Devenir partenaire", path: "/company/login" },
+      { label: "Devenir partenaire", path: "/devenir-partenaire" },
     ],
   },
 ];

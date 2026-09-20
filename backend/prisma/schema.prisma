@@ -295,6 +295,7 @@ model Booking {
 
   disputes       Dispute[]
   bookingRequest BookingRequest?
+  review         Review?
 
   @@index([userId])
   @@index([tripId])
@@ -350,6 +351,9 @@ model BookingSeat {
   @@index([bookingRequestId])
 }
 
+// Un avis réel, toujours rattaché à une réservation précise (bookingId
+// unique) : pas de moyen de laisser un avis sans avoir réellement voyagé
+// avec la compagnie concernée.
 model Review {
   id        String   @id @default(cuid())
   content   String
@@ -358,6 +362,8 @@ model Review {
   userId    String
   company   Company  @relation(fields: [companyId], references: [id])
   companyId String
+  booking   Booking  @relation(fields: [bookingId], references: [id])
+  bookingId String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

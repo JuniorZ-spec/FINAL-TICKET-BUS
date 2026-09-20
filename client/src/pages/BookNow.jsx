@@ -1,26 +1,38 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { useDispatch } from "react-redux";
+import { useState, useEffect, useCallback } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import { useNavigate, useParams } from "react-router-dom";
-import { message, Col, Row, Spin, Card } from "antd";
+import { message, Spin } from "antd";
 import { ShowLoading, HideLoading } from "../redux/alertsSlice";
 import { axiosInstance } from "../helpers/axiosInstance";
 import {
-  Calendar,
-  Clock,
-  MapPin,
   ArrowRight,
-  Truck,
-  FerrisWheel as SteeringWheel,
+  ArrowLeft,
+  Users,
   CreditCard,
-  ChevronRight,
+  ShieldCheck,
   Bus,
+  Wind,
+  Wifi,
+  Smartphone,
 } from "lucide-react";
-import { useSelector } from "react-redux";
-import moment from "moment";
 import SeatSelection from "../components/SeatSelection";
 import { useKKiaPay } from "kkiapay-react";
 
+const SEAT_LOCK_SECONDS = 600; // doit rester aligné avec le TTL Redis backend (lockSeat, EX 600)
+
+const PAYMENT_METHODS = [
+  { id: "mtn", label: "MTN MoMo", sub: "Paiement via MTN Mobile Money", providers: ["mtn"] },
+  { id: "moov", label: "Moov Money", sub: "Paiement via Moov Money", providers: ["moov"] },
+  {
+    id: "card",
+    label: "Carte bancaire",
+    sub: "Visa / Mastercard",
+    providers: ["visa", "mastercard"],
+  },
+];
+
 function BookNow() {
+  const [step, setStep] = useState("seats"); // "seats" | "payment"
   const [selectedSeats, setSelectedSeats] = useState([]);
   const navigate = useNavigate();
   const [trip, setTrip] = useState(null);
@@ -29,34 +41,42 @@ function BookNow() {
   const params = useParams();
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.users);
-  const [bookingCompleted, setBookingCompleted] = useState(false);
-  const [comments, setComments] = useState([]);
-  const [timeLeft, setTimeLeft] = useState(0); // en secondes
+  const [timeLeft, setTimeLeft] = useState(0);
   const [timerActive, setTimerActive] = useState(false);
-
-  const formatDate = (date) => {
-    return date && moment(date, moment.ISO_8601, true).isValid()
-      ? moment(date).format("YYYY-MM-DD")
-      : "Date non disponible";
-  };
+  const [passengerName, setPassengerName] = useState("");
+  const [passengerPhone, setPassengerPhone] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("mtn");
 
   const { openKkiapayWidget, addKkiapayListener, removeKkiapayListener } = useKKiaPay();
 
+  useEffect(() => {
+    if (user) {
+      setPassengerName(user.name || "");
+      setPassengerPhone(user.travelerProfile?.phone || "");
+    }
+  }, [user]);
+
+  const formatDate = (date) => {
+    const d = new Date(date);
+    return date && !isNaN(d)
+      ? d.toLocaleDateString("fr-FR", {
+          weekday: "long",
+          day: "numeric",
+          month: "long",
+          year: "numeric",
+        })
+      : "Date non disponible";
+  };
+
   const getTrip = async () => {
     try {
-      dispatch(ShowLoading());
-      const response = await axiosInstance.post("/api/trips/get-trip-by-id", {
-        id: params.id,
-      });
-      dispatch(HideLoading());
-
+      const response = await axiosInstance.post("/api/trips/get-trip-by-id", { id: params.id });
       if (response.data.success && response.data.data) {
         setTrip(response.data.data);
       } else {
         message.error("Le trajet n'a pas pu être récupéré.");
       }
     } catch (error) {
-      dispatch(HideLoading());
       message.error(error.response?.data?.message || error.message);
     } finally {
       setLoading(false);
@@ -65,34 +85,19 @@ function BookNow() {
 
   const handlePaymentSuccess = useCallback(
     async (response) => {
-      if (isProcessing) {
-        console.log(" Une opération est déjà en cours, on ignore cet appel.");
-        return;
-      }
-
+      if (isProcessing) return;
       setIsProcessing(true);
 
       try {
-        // 🔐 On récupère les sièges depuis localStorage
         const storedSeats = localStorage.getItem("pendingSeats");
         const pendingSeats = storedSeats ? JSON.parse(storedSeats) : [];
 
-        console.log("🪑 Seats en attente (localStorage) :", pendingSeats);
-
         if (!pendingSeats.length) {
-          console.error("❌ Aucun siège en attente.");
           message.error("Aucune place sélectionnée. Veuillez recommencer.");
           return;
         }
 
         dispatch(ShowLoading());
-
-        console.log("📤 Payload envoyé :", {
-          tripId: trip.id,
-          seats: pendingSeats,
-          busId: trip.bus.id,
-          transactionId: response.transactionId,
-        });
 
         const res = await axiosInstance.post("/api/bookings/book-seat", {
           tripId: trip.id,
@@ -101,35 +106,33 @@ function BookNow() {
           transactionId: response.transactionId,
         });
 
-        dispatch(HideLoading());
-
         if (res.data.success) {
-          console.log("✅ Réservation réussie :", res.data.message);
           message.success(res.data.message);
           setSelectedSeats([]);
-          localStorage.removeItem("pendingSeats"); // 🧹 nettoyage
+          localStorage.removeItem("pendingSeats");
           await getTrip();
           navigate("/bookings");
         } else {
-          console.warn("⚠️ Réservation échouée :", res.data.message);
           message.error(res.data.message);
         }
       } catch (error) {
-        dispatch(HideLoading());
-        console.error("❌ Erreur lors de la réservation :", error);
         message.error(error.response?.data?.message || error.message);
       } finally {
+        dispatch(HideLoading());
         setIsProcessing(false);
       }
     },
-    [trip, isProcessing, dispatch, navigate, getTrip]
+    [trip, isProcessing, dispatch, navigate]
   );
 
-  const openPayment = async () => {
+  // Verrouille les sièges et passe à l'étape paiement (le compte à rebours
+  // correspond exactement au TTL du verrou côté backend).
+  const goToPayment = async () => {
     if (!trip) return message.error("Trajet non chargé.");
     if (!selectedSeats.length) return message.error("Veuillez sélectionner au moins une place.");
 
     try {
+      dispatch(ShowLoading());
       const res = await axiosInstance.post("/api/bookings/lock-seat", {
         tripId: trip.id,
         seats: selectedSeats,
@@ -138,72 +141,57 @@ function BookNow() {
         return message.error(res.data.message || "Erreur lors du verrouillage.");
       }
 
-      // Stocke les sièges et lance le timer à 3 minutes
-      localStorage.setItem("pendingSeats", JSON.stringify(selectedSeats));
-      setTimeLeft(180);
+      setTimeLeft(SEAT_LOCK_SECONDS);
       setTimerActive(true);
-      message.info("⏳ Vous avez 3 minutes pour finaliser votre paiement");
-
-      openKkiapayWidget({
-        amount: trip.price * selectedSeats.length,
-        api_key: "c56683b01f7511f087baa9b5af50e7ed",
-        sandbox: true,
-        email: user?.email || "client@example.com",
-        phone: user?.phone || "97000000",
-      });
+      setStep("payment");
     } catch (err) {
-      const backendMsg = err?.response?.data?.message;
-      message.error(backendMsg || "Impossible de vérifier la disponibilité des sièges.");
+      message.error(
+        err?.response?.data?.message || "Impossible de vérifier la disponibilité des sièges."
+      );
+    } finally {
+      dispatch(HideLoading());
     }
   };
 
+  const payNow = () => {
+    if (!passengerName.trim() || !passengerPhone.trim()) {
+      return message.error("Veuillez renseigner le nom et le téléphone du passager.");
+    }
+
+    localStorage.setItem("pendingSeats", JSON.stringify(selectedSeats));
+    const method = PAYMENT_METHODS.find((m) => m.id === paymentMethod);
+
+    openKkiapayWidget({
+      amount: trip.price * selectedSeats.length,
+      api_key: import.meta.env.VITE_KKIAPAY_KEY,
+      // Reste en sandbox sauf si explicitement désactivé — une variable
+      // d'environnement absente ou mal orthographiée ne doit jamais faire
+      // basculer accidentellement en paiement réel.
+      sandbox: import.meta.env.VITE_KKIAPAY_SANDBOX !== "false",
+      fullname: passengerName,
+      email: user?.email || "client@example.com",
+      phone: passengerPhone,
+      providers: { accept: method?.providers || [] },
+    });
+  };
+
   useEffect(() => {
-    console.log("✅ Listener success attaché à Kkiapay");
     addKkiapayListener("success", handlePaymentSuccess);
-    return () => {
-      console.log("🔁 Listener success détaché");
-      removeKkiapayListener("success", handlePaymentSuccess);
-    };
+    return () => removeKkiapayListener("success", handlePaymentSuccess);
   }, [handlePaymentSuccess]);
 
   useEffect(() => {
     let interval;
-
     if (timerActive && timeLeft > 0) {
-      interval = setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
-      }, 1000);
+      interval = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
     }
-
     if (timerActive && timeLeft === 0) {
       setTimerActive(false);
-      // On prévient sans vider la sélection : l'utilisateur peut relancer
-      message.warning(
-        "⏳ Votre verrou a expiré. Cliquez à nouveau sur « Confirmer la réservation » pour relocker vos sièges."
-      );
+      setStep("seats");
+      message.warning("Le délai de blocage de vos sièges a expiré. Veuillez recommencer.");
     }
-
     return () => clearInterval(interval);
   }, [timerActive, timeLeft]);
-
-  const getCommentsForCompany = async (companyId) => {
-    try {
-      const response = await axiosInstance.get(`/api/comments/company/${companyId}`);
-      if (response.data.success) {
-        setComments(response.data.data);
-      } else {
-        message.error("Impossible de récupérer les commentaires.");
-      }
-    } catch (error) {
-      message.error("Erreur lors de la récupération des commentaires.");
-    }
-  };
-
-  useEffect(() => {
-    if (trip?.company?.id) {
-      getCommentsForCompany(trip.company.id);
-    }
-  }, [trip]);
 
   useEffect(() => {
     getTrip();
@@ -211,190 +199,260 @@ function BookNow() {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen">
+      <div className="flex justify-center items-center h-screen bg-offwhite">
         <Spin size="large" />
       </div>
     );
   }
 
+  if (!trip) return null;
+
+  const capacity = trip.bus?.capacity || 0;
+  const bookedCount = (trip.bus?.seatsBooked || []).length;
+  const availableSeats = Math.max(capacity - bookedCount, 0);
+  const total = trip.price * selectedSeats.length;
+  const minutes = String(Math.floor(timeLeft / 60)).padStart(2, "0");
+  const seconds = String(timeLeft % 60).padStart(2, "0");
+
   return (
-    <div
-      className="h-screen bg-gradient-to-br bg-gray-100 from-blue-50 to-indigo-50 overflow-hidden"
-      style={{ fontFamily: "Poppins, sans-serif" }}
-    >
-      <div className="max-w-6xl mx-auto h-full px-4 py-4 flex gap-6">
-        {trip && (
-          <Row
-            gutter={[20, 20]}
-            justify="space-between"
-            style={{ width: "100%", padding: "0 5px" }}
+    <div className="min-h-screen bg-offwhite">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+        {step === "payment" && (
+          <button
+            onClick={() => setStep("seats")}
+            className="flex items-center gap-1.5 text-sm text-anthracite/50 hover:text-anthracite mb-4"
           >
-            <Col lg={15} xs={24} sm={24} style={{ padding: "10px", maxWidth: "500px" }}>
-              <div className="space-y-3">
-                {/* Bloc Détails du trajet */}
-                <div className="bg-white/80 backdrop-blur-sm rounded-xl shadow-xl p-3 border border-white/60 flex flex-col gap-4">
-                  {/* Lieux de départ et d'arrivée */}
-                  <div className="space-y-2" style={{ fontFamily: "Poppins, sans-serif" }}>
-                    {/* Départ */}
-                    <div className="flex items-start gap-3 bg-gradient-to-r from-blue-50 to-blue-100 p-2 rounded-md">
-                      <div className="w-9 h-9 bg-blue-200 rounded-full flex items-center justify-center">
-                        <MapPin className="w-5 h-5 text-blue-700" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-sm font-semibold text-gray-800">{trip.from}</div>
-                        {trip.departureStation && (
-                          <div className="text-xs text-blue-600">{trip.departureStation.name}</div>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Arrivée */}
-                    <div className="flex items-start gap-3 bg-gradient-to-r from-green-50 to-emerald-100 p-2 rounded-md">
-                      <div className="w-9 h-9 bg-green-200 rounded-full flex items-center justify-center">
-                        <MapPin className="w-5 h-5 text-green-700" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-sm font-semibold text-gray-800">{trip.to}</div>
-                        {trip.arrivalStation && (
-                          <div className="text-xs text-green-600">{trip.arrivalStation.name}</div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Date / Heure / Bus / Services */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                    {/* Date */}
-                    <div className="flex items-center gap-2 p-2 bg-white border rounded-md">
-                      <Calendar className="w-4 h-4 text-blue-500" />
-                      <div className="text-sm text-gray-700 font-medium">
-                        {formatDate(trip.date)}
-                      </div>
-                    </div>
-
-                    {/* Heure */}
-                    <div className="flex items-center gap-2 p-2 bg-white border rounded-md">
-                      <Clock className="w-4 h-4 text-blue-500" />
-                      <div className="text-sm text-gray-700 font-medium">{trip.departureTime}</div>
-                    </div>
-
-                    {/* Bus Name */}
-                    {trip.bus?.name && (
-                      <div className="flex items-center gap-2 p-2 bg-white border rounded-md col-span-1">
-                        <SteeringWheel className="w-4 h-4 text-blue-500" />
-                        <div className="text-sm font-medium text-gray-700">{trip.bus.name}</div>
-                      </div>
-                    )}
-
-                    {/* Services */}
-                    {(trip.bus?.airConditioning || trip.bus?.wifi) && (
-                      <div className="flex items-center gap-2 p-2 bg-white border rounded-md col-span-1">
-                        <Bus className="w-4 h-4 text-blue-500" />
-                        <div className="text-xs text-gray-700 font-medium">
-                          {trip.bus.airConditioning && "Climatisation"}
-                          {trip.bus.airConditioning && trip.bus.wifi && " · "}
-                          {trip.bus.wifi && "Wi-Fi"}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Bloc Récapitulatif + Paiement */}
-                <div
-                  className="bg-white/80 backdrop-blur-sm rounded-xl shadow-xl p-4 border border-white/60"
-                  style={{ fontFamily: "Poppins, sans-serif" }}
-                >
-                  <div className="space-y-1.5 text-sm">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Prix par siège</span>
-                      <span className="font-semibold text-gray-900">
-                        {trip.price.toLocaleString()} FCFA
-                      </span>
-                    </div>
-
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Sièges sélectionnés</span>
-                      <span className="font-bold text-gray-900">{selectedSeats.length}</span>
-                    </div>
-
-                    <hr className="border-gray-200 my-1" />
-
-                    <div className="flex justify-between items-center font-bold text-base">
-                      <span className="text-gray-800">Total</span>
-                      <span className="text-blue-600">
-                        {(trip.price * selectedSeats.length).toLocaleString()} FCFA
-                      </span>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={openPayment}
-                    disabled={selectedSeats.length === 0}
-                    className={`w-full mt-3 py-2.5 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 text-sm ${
-                      selectedSeats.length === 0
-                        ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                        : "bg-gradient-to-r from-blue-600 via-indigo-600 to-green-600 hover:brightness-105 text-white shadow-md hover:shadow-lg"
-                    } `}
-                  >
-                    <CreditCard className="w-5 h-5" />
-                    {selectedSeats.length === 0
-                      ? "Sélectionnez un siège"
-                      : "Confirmer la réservation"}
-                  </button>
-
-                  <div className="mt-2 text-center text-xs text-gray-500">
-                    <div className="flex justify-center items-center gap-2">
-                      <span className="w-3 h-3 rounded-full bg-green-500"></span>
-                      Paiement sécurisé SSL 256-bit
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </Col>
-
-            <div
-              style={{
-                width: "50%", // encore un peu réduit
-                height: "600px",
-                paddingtop: "1px",
-                margintop: "1px",
-                display: "flex",
-                justifyContent: "center",
-              }}
-            >
-              <div className="w-200px mt-3 max-h-[600px] rounded-lg overflow-hidden transition-all text-[10px] leading-tight">
-                {/* Header */}
-                <div className="bg-gray-900 text-white pt-2 text-[12px]">
-                  <div className="flex items-center justify-center text-center space-x-10 p-2">
-                    <div className="flex items-center space-x-[2px]">
-                      <div className="w-[10px] h-[10px] bg-blue-700 border border-blue-300 rounded-sm"></div>
-                      <span>Dispo</span>
-                    </div>
-                    <div className="flex items-center space-x-[2px]">
-                      <div className="w-[10px] h-[10px] bg-green-500 border border-green-600 rounded-sm"></div>
-                      <span>Choisis</span>
-                    </div>
-                    <div className="flex items-center space-x-[2px]">
-                      <div className="w-[10px] h-[10px] bg-red-800 border border-red-600 rounded-sm"></div>
-                      <span>Reserver</span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Bus front */}
-                <div className="bg-gray-300 space-x-1 pt-1 mt-1">
-                  {/* Seats */}
-                  <SeatSelection
-                    selectedSeats={selectedSeats}
-                    setSelectedSeats={setSelectedSeats}
-                    bus={trip.bus}
-                  />
-                </div>
-              </div>
-            </div>
-          </Row>
+            <ArrowLeft size={14} /> Retour
+          </button>
         )}
+
+        {/* Bandeau récapitulatif du trajet */}
+        <div className="bg-white rounded-2xl border border-gray-200 p-4 sm:p-5 mb-6 flex items-center justify-between flex-wrap gap-3">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 rounded-xl bg-terracotta/10 flex items-center justify-center shrink-0">
+              <Bus size={20} className="text-terracotta" />
+            </div>
+            <div>
+              <p className="font-bold text-anthracite flex items-center gap-2">
+                {trip.from} <ArrowRight size={15} className="text-terracotta" /> {trip.to}
+              </p>
+              <p className="text-sm text-anthracite/50">
+                {trip.company?.companyName || "Compagnie"} · {trip.departureTime} ·{" "}
+                {formatDate(trip.date)}
+              </p>
+            </div>
+          </div>
+          <span
+            className={`text-sm font-semibold px-3 py-1.5 rounded-full ${
+              availableSeats <= 5 ? "bg-red-50 text-red-600" : "bg-brand-green/10 text-brand-green"
+            }`}
+          >
+            {availableSeats} place{availableSeats !== 1 ? "s" : ""} libre
+            {availableSeats !== 1 ? "s" : ""}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Colonne principale : sièges ou paiement */}
+          <div className="lg:col-span-2 space-y-5">
+            {step === "seats" ? (
+              <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6">
+                <div className="flex items-center justify-between mb-5">
+                  <h2 className="text-lg font-bold text-anthracite">Choisissez vos sièges</h2>
+                  {(trip.bus?.airConditioning || trip.bus?.wifi) && (
+                    <div className="flex items-center gap-2">
+                      {trip.bus.airConditioning && (
+                        <span className="inline-flex items-center gap-1 bg-brand-green/10 text-brand-green px-2 py-1 rounded-lg text-xs font-semibold">
+                          <Wind size={11} /> Clim
+                        </span>
+                      )}
+                      {trip.bus.wifi && (
+                        <span className="inline-flex items-center gap-1 bg-saffron/15 text-saffron px-2 py-1 rounded-lg text-xs font-semibold">
+                          <Wifi size={11} /> Wi-Fi
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <SeatSelection
+                  selectedSeats={selectedSeats}
+                  setSelectedSeats={setSelectedSeats}
+                  bus={trip.bus}
+                />
+              </div>
+            ) : (
+              <>
+                <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6">
+                  <h2 className="text-lg font-bold text-anthracite mb-4">Informations passager</h2>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-bold text-anthracite/50 uppercase tracking-wide mb-1.5">
+                        Nom complet
+                      </label>
+                      <input
+                        type="text"
+                        value={passengerName}
+                        onChange={(e) => setPassengerName(e.target.value)}
+                        placeholder="Ex : Amadou Kouassi"
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/30"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold text-anthracite/50 uppercase tracking-wide mb-1.5">
+                        Téléphone
+                      </label>
+                      <input
+                        type="tel"
+                        value={passengerPhone}
+                        onChange={(e) => setPassengerPhone(e.target.value)}
+                        placeholder="+229 XX XX XX XX"
+                        className="w-full px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-terracotta/30"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6">
+                  <h2 className="text-lg font-bold text-anthracite mb-4">Mode de paiement</h2>
+                  <div className="space-y-2.5">
+                    {PAYMENT_METHODS.map((m) => (
+                      <label
+                        key={m.id}
+                        className={`flex items-center gap-3 p-3.5 rounded-xl border cursor-pointer transition-colors ${
+                          paymentMethod === m.id
+                            ? "border-terracotta bg-terracotta/5"
+                            : "border-gray-200 hover:border-gray-300"
+                        }`}
+                      >
+                        <input
+                          type="radio"
+                          name="paymentMethod"
+                          checked={paymentMethod === m.id}
+                          onChange={() => setPaymentMethod(m.id)}
+                          className="accent-terracotta"
+                        />
+                        <Smartphone size={18} className="text-anthracite/40 shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-anthracite">{m.label}</p>
+                          <p className="text-xs text-anthracite/50">{m.sub}</p>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Récapitulatif */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-2xl border border-gray-200 p-5 sm:p-6 sticky top-6 space-y-5">
+              <div>
+                <h2 className="text-lg font-bold text-anthracite mb-3">Récapitulatif</h2>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-anthracite/50">Trajet</span>
+                    <span className="font-semibold text-anthracite">
+                      {trip.from} → {trip.to}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-anthracite/50">Compagnie</span>
+                    <span className="font-semibold text-anthracite">
+                      {trip.company?.companyName || "—"}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-anthracite/50">Départ</span>
+                    <span className="font-semibold text-anthracite">
+                      {trip.departureTime}
+                      {trip.departureStation && ` · ${trip.departureStation.name}`}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="border-t border-gray-100 pt-4">
+                <p className="text-sm font-semibold text-anthracite/70 mb-2 flex items-center gap-1.5">
+                  <Users size={14} /> Sièges sélectionnés
+                </p>
+                {selectedSeats.length === 0 ? (
+                  <p className="text-sm text-anthracite/40">
+                    Aucun siège choisi pour l&apos;instant.
+                  </p>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {selectedSeats.map((s) => (
+                      <span
+                        key={s}
+                        className="text-xs font-mono font-semibold bg-terracotta/10 text-terracotta px-2 py-1 rounded-lg"
+                      >
+                        {s}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-gray-100 pt-4 space-y-1.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-anthracite/50">
+                    {selectedSeats.length} × {trip.price.toLocaleString("fr-FR")} FCFA
+                  </span>
+                  <span className="font-semibold text-anthracite">
+                    {total.toLocaleString("fr-FR")} FCFA
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-anthracite/50">Frais de service</span>
+                  <span className="font-semibold text-anthracite">0 FCFA</span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-gray-100 mt-2">
+                  <span className="font-bold text-anthracite">Total</span>
+                  <span className="font-bold text-terracotta text-lg">
+                    {total.toLocaleString("fr-FR")} FCFA
+                  </span>
+                </div>
+              </div>
+
+              {timerActive && (
+                <div className="flex items-center gap-2 bg-brand-green/10 text-brand-green text-xs font-medium px-3 py-2.5 rounded-xl">
+                  <ShieldCheck size={15} className="shrink-0" />
+                  Vos sièges sont bloqués{" "}
+                  <span className="font-mono font-bold">
+                    {minutes}:{seconds}
+                  </span>{" "}
+                  pendant le paiement.
+                </div>
+              )}
+
+              {step === "seats" ? (
+                <button
+                  onClick={goToPayment}
+                  disabled={selectedSeats.length === 0}
+                  className={`w-full py-3.5 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 text-sm ${
+                    selectedSeats.length === 0
+                      ? "bg-gray-100 text-anthracite/30 cursor-not-allowed"
+                      : "bg-terracotta text-white hover:bg-terracotta-dark"
+                  }`}
+                >
+                  <CreditCard size={17} />
+                  {selectedSeats.length === 0
+                    ? "Sélectionnez un siège"
+                    : "Continuer vers le paiement"}
+                </button>
+              ) : (
+                <button
+                  onClick={payNow}
+                  className="w-full py-3.5 rounded-2xl font-bold transition-all flex items-center justify-center gap-2 text-sm bg-terracotta text-white hover:bg-terracotta-dark"
+                >
+                  <CreditCard size={17} />
+                  Payer maintenant
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
